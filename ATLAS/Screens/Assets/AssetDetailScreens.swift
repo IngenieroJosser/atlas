@@ -8,22 +8,17 @@ struct AssetDetailScreen: View {
     var body: some View {
         AtlasPage {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 28) {
+                VStack(alignment: .leading, spacing: 30) {
                     AtlasEditorialHeader(
                         eyebrow: "ASSET / EQUIPMENT",
                         title: "Unidad de enfriamiento M-028",
-                        subtitle: "Actualizado hace 18 min",
+                        subtitle: "Un activo, un historial, una lectura actual.",
                         backAction: { dismiss() },
                         trailingSymbol: "ellipsis",
                         trailingAction: {}
                     )
 
-                    HStack(spacing: 10) {
-                        StatusBadge(health: .stable)
-                        SyncBadge(state: .synced)
-                    }
-
-                    assetVisual
+                    assetIdentity
                     currentState
 
                     AIInsight(
@@ -47,36 +42,129 @@ struct AssetDetailScreen: View {
         }
     }
 
-    private var assetVisual: some View {
-        ZStack {
-            AtlasColor.navy
-            VStack(spacing: 18) {
-                Image(systemName: "fan")
-                    .font(.system(size: 76, weight: .ultraLight))
-                    .foregroundStyle(Color.white.opacity(0.88))
-                HStack(spacing: 20) {
-                    Label("M-028", systemImage: "number")
-                    Label("PLANTA 01", systemImage: "mappin")
+    private var assetIdentity: some View {
+        VStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                AtlasColor.navy
+
+                GeometryReader { proxy in
+                    Path { path in
+                        let step: CGFloat = 32
+                        var x: CGFloat = 0
+                        while x <= proxy.size.width {
+                            path.move(to: CGPoint(x: x, y: 0))
+                            path.addLine(to: CGPoint(x: x, y: proxy.size.height))
+                            x += step
+                        }
+                        var y: CGFloat = 0
+                        while y <= proxy.size.height {
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: proxy.size.width, y: y))
+                            y += step
+                        }
+                    }
+                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
                 }
-                .font(AtlasType.mono(.caption2, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.62))
+
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack {
+                        Text("ASSET / M-028")
+                            .font(AtlasType.label(.caption2, weight: .semibold))
+                            .tracking(1.0)
+                            .foregroundStyle(Color.white.opacity(0.58))
+                        Spacer()
+                        HStack(spacing: 7) {
+                            Circle().fill(AtlasColor.healthy).frame(width: 7, height: 7)
+                            Text("ESTABLE")
+                                .font(AtlasType.label(.caption2, weight: .semibold))
+                                .tracking(0.7)
+                        }
+                        .foregroundStyle(.white)
+                    }
+
+                    Spacer()
+
+                    HStack(alignment: .bottom) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Cooling / HVAC")
+                                .font(AtlasType.body(.caption, weight: .medium))
+                                .foregroundStyle(Color.white.opacity(0.55))
+                            Text("18")
+                                .font(AtlasType.display(.largeTitle, weight: .semibold))
+                                .tracking(-1.5)
+                                .foregroundStyle(.white)
+                            Text("WORLD STATES")
+                                .font(AtlasType.label(.caption2, weight: .semibold))
+                                .tracking(0.9)
+                                .foregroundStyle(Color.white.opacity(0.58))
+                        }
+
+                        Spacer()
+
+                        ZStack {
+                            Circle()
+                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                .frame(width: 112, height: 112)
+                            Circle()
+                                .stroke(AtlasColor.blue.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [4, 7]))
+                                .frame(width: 86, height: 86)
+                            Image(systemName: "fan")
+                                .font(.system(size: 48, weight: .ultraLight))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .padding(20)
             }
+            .frame(height: 252)
+
+            HStack(spacing: 0) {
+                identityMeta("M-028", "ID")
+                identityRule
+                identityMeta("PLANTA 01", "UBICACIÓN")
+                identityRule
+                identityMeta("94%", "CONFIANZA")
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 78)
+            .background(AtlasColor.surface)
         }
-        .frame(height: 230)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .accessibilityLabel("Representación visual de Unidad de enfriamiento M-028")
+        .overlay { RoundedRectangle(cornerRadius: 18).stroke(AtlasColor.line) }
+    }
+
+    private func identityMeta(_ value: String, _ label: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(value)
+                .font(AtlasType.heading(.subheadline, weight: .semibold))
+                .foregroundStyle(AtlasColor.ink)
+            Text(label)
+                .font(AtlasType.label(.caption2, weight: .semibold))
+                .tracking(0.75)
+                .foregroundStyle(AtlasColor.inkMuted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var identityRule: some View {
+        Rectangle().fill(AtlasColor.line).frame(width: 1, height: 34).padding(.horizontal, 8)
     }
 
     private var currentState: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            AtlasSectionLabel(index: "01", title: "CURRENT STATE")
-            HStack(alignment: .top, spacing: 20) {
+        VStack(alignment: .leading, spacing: 17) {
+            AtlasSectionLabel(index: "01", title: "CURRENT STATE", trailing: "Hace 18 min")
+            Text("Una lectura compacta del estado actual.")
+                .font(AtlasType.heading(.title2, weight: .semibold))
+                .tracking(-0.55)
+                .foregroundStyle(AtlasColor.ink)
+
+            HStack(alignment: .top, spacing: 22) {
                 MetadataLabel(title: "Condición", value: "Estable")
                 MetadataLabel(title: "Confianza", value: "94%")
-                MetadataLabel(title: "Última inspección", value: "Hoy")
+                MetadataLabel(title: "Inspección", value: "Hoy")
             }
             AtlasDivider()
-            HStack(alignment: .top, spacing: 20) {
+            HStack(alignment: .top, spacing: 22) {
                 MetadataLabel(title: "Categoría", value: "HVAC")
                 MetadataLabel(title: "Ubicación", value: "Planta 01")
                 MetadataLabel(title: "Estados", value: "18")
@@ -87,6 +175,10 @@ struct AssetDetailScreen: View {
     private var changes: some View {
         VStack(alignment: .leading, spacing: 10) {
             AtlasSectionLabel(index: "02", title: "CHANGES", trailing: "2 recientes")
+            Text("Qué cambió desde la última captura.")
+                .font(AtlasType.heading(.title2, weight: .semibold))
+                .tracking(-0.55)
+                .foregroundStyle(AtlasColor.ink)
             ForEach(AtlasSampleData.changes.prefix(2)) { change in
                 ChangeRow(change: change) { open(.changeDetail) }
             }
@@ -96,6 +188,10 @@ struct AssetDetailScreen: View {
     private var evidence: some View {
         VStack(alignment: .leading, spacing: 14) {
             AtlasSectionLabel(index: "03", title: "EVIDENCE", trailing: "12 piezas")
+            Text("Evidencia vinculada al estado actual.")
+                .font(AtlasType.heading(.title2, weight: .semibold))
+                .tracking(-0.55)
+                .foregroundStyle(AtlasColor.ink)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(AtlasSampleData.evidence) { evidence in
@@ -109,6 +205,11 @@ struct AssetDetailScreen: View {
     private var maintenance: some View {
         VStack(alignment: .leading, spacing: 6) {
             AtlasSectionLabel(index: "04", title: "MAINTENANCE", trailing: "Próximo · 21 sep")
+            Text("Acciones operativas conectadas al activo.")
+                .font(AtlasType.heading(.title2, weight: .semibold))
+                .tracking(-0.55)
+                .foregroundStyle(AtlasColor.ink)
+                .padding(.bottom, 4)
             PrimaryActionRow(title: "Revisión preventiva", subtitle: "Prioridad media · Equipo técnico", symbol: "wrench.and.screwdriver") {
                 open(.maintenanceDetail)
             }
@@ -120,26 +221,26 @@ struct AssetDetailScreen: View {
     }
 
     private var activity: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             AtlasSectionLabel(index: "05", title: "ACTIVITY", trailing: "Últimos 7 días")
-            Text("20 SEP · Estado 018 capturado")
-            Text("19 SEP · Inspección visual completada")
-            Text("18 SEP · Recomendación de seguimiento creada")
+            Timeline(items: [
+                ("20 SEP", "Estado 018 capturado", "Nueva evidencia y geometría asociadas."),
+                ("19 SEP", "Inspección visual completada", "Sin anomalías críticas."),
+                ("18 SEP", "Seguimiento creado", "Revisar sistema de montaje en próxima inspección.")
+            ])
         }
-        .font(AtlasType.body(.subheadline))
-        .foregroundStyle(AtlasColor.inkSecondary)
     }
 
     private var assetActions: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 0) {
             compactAction("Escanear", "viewfinder", startScan)
             compactAction("Inspeccionar", "checklist", { open(.newInspection) })
             compactAction("Comparar", "rectangle.split.2x1", { open(.compare) })
             compactAction("ATLAS", "sparkles", { open(.askAtlas) })
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .background(AtlasColor.surface.opacity(0.98))
         .overlay(alignment: .top) { AtlasDivider() }
     }
 
@@ -152,7 +253,7 @@ struct AssetDetailScreen: View {
             .foregroundStyle(AtlasColor.ink)
             .frame(maxWidth: .infinity, minHeight: 48)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
     }
 }
 

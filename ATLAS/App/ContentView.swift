@@ -4,6 +4,7 @@ struct AtlasRootView: View {
     @AppStorage("atlas.didOnboard") private var didOnboard = false
     @AppStorage("atlas.authenticated") private var authenticated = false
     @State private var splashFinished = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -23,7 +24,9 @@ struct AtlasRootView: View {
                 ContentView()
             }
         }
-        .animation(.easeOut(duration: 0.24), value: splashFinished)
+        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: splashFinished)
+        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: didOnboard)
+        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: authenticated)
         .task {
             try? await Task.sleep(for: .milliseconds(900))
             splashFinished = true
@@ -35,6 +38,7 @@ struct ContentView: View {
     @State private var selectedTab: AtlasTab = .world
     @State private var path: [AtlasRoute] = []
     @State private var activeSheet: AtlasSheet?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -51,6 +55,9 @@ struct ContentView: View {
                         ProfileScreen(open: open)
                     }
                 }
+                .id(selectedTab.rawValue)
+                .transition(.opacity.combined(with: .scale(scale: 0.992)))
+                .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: selectedTab.rawValue)
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 BottomNavigation(selectedTab: $selectedTab, startScan: startScan)
@@ -69,10 +76,12 @@ struct ContentView: View {
     }
 
     private func open(_ route: AtlasRoute) {
+        AtlasHaptics.selection()
         path.append(route)
     }
 
     private func startScan() {
+        AtlasHaptics.impact(.medium)
         activeSheet = .scan
     }
 

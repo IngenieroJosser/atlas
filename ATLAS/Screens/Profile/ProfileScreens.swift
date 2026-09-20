@@ -48,7 +48,7 @@ struct ProfileScreen: View {
                         .foregroundStyle(AtlasColor.critical)
                         .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(AtlasPressButtonStyle())
                 .padding(.top, 8)
             }
             .padding(.horizontal, 20)
@@ -296,7 +296,7 @@ struct DevicePermissionsScreen: View {
                     .background(status.color.opacity(0.08))
                     .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(AtlasPressButtonStyle())
             .disabled(status == .allowed)
         }
         .padding(.vertical, 12)

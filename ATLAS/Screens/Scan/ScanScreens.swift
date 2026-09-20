@@ -8,27 +8,28 @@ struct ScanFlowView: View {
     @State private var mode: ScanMode = .auto
     @State private var capturedImage: UIImage?
     @State private var visionResult = AtlasVisionResult(recognizedText: [], textConfidence: 0)
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
             switch step {
             case .mode:
                 ScanModeScreen(mode: $mode, close: { dismiss() }) {
-                    step = .capture
+                    move(to: .capture)
                 }
             case .capture:
                 ScanCaptureScreen(
                     mode: $mode,
                     close: { dismiss() },
-                    back: { step = .mode }
+                    back: { move(to: .mode) }
                 ) { image in
                     capturedImage = image
-                    step = .processing
+                    move(to: .processing)
                 }
             case .processing:
                 ScanProcessingScreen(image: capturedImage) { result in
                     visionResult = result
-                    step = .result
+                    move(to: .result)
                 }
             case .result:
                 ScanResultScreen(
@@ -36,8 +37,26 @@ struct ScanFlowView: View {
                     image: capturedImage,
                     visionResult: visionResult,
                     close: { dismiss() },
-                    captureAgain: { step = .capture }
+                    captureAgain: { move(to: .capture) }
                 )
+            }
+        }
+        .id(step.rawValue)
+        .transition(
+            .asymmetric(
+                insertion: .opacity.combined(with: .move(edge: .trailing)),
+                removal: .opacity.combined(with: .move(edge: .leading))
+            )
+        )
+    }
+
+    private func move(to next: ScanStep) {
+        AtlasHaptics.selection()
+        if reduceMotion {
+            step = next
+        } else {
+            withAnimation(AtlasMotion.standardAnimation) {
+                step = next
             }
         }
     }
@@ -47,6 +66,7 @@ private struct ScanModeScreen: View {
     @Binding var mode: ScanMode
     let close: () -> Void
     let continueAction: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         AtlasPage {
@@ -59,7 +79,7 @@ private struct ScanModeScreen: View {
                                 .foregroundStyle(AtlasColor.ink)
                                 .frame(width: 44, height: 44)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(AtlasCompactPressButtonStyle())
                         Spacer()
                         Text("NUEVO ESTADO")
                             .font(AtlasType.label(.caption2, weight: .semibold))
@@ -81,7 +101,12 @@ private struct ScanModeScreen: View {
                     VStack(spacing: 0) {
                         ForEach(ScanMode.allCases) { option in
                             Button {
-                                mode = option
+                                AtlasHaptics.selection()
+                                if reduceMotion {
+                                    mode = option
+                                } else {
+                                    withAnimation(AtlasMotion.fastAnimation) { mode = option }
+                                }
                             } label: {
                                 HStack(spacing: 14) {
                                     Image(systemName: option.symbol)
@@ -101,10 +126,12 @@ private struct ScanModeScreen: View {
                                     Spacer()
                                     Image(systemName: mode == option ? "checkmark.circle.fill" : "circle")
                                         .foregroundStyle(mode == option ? AtlasColor.blue : AtlasColor.lineStrong)
+                                        .scaleEffect(mode == option ? 1 : 0.92)
+                                        .animation(reduceMotion ? nil : AtlasMotion.firmSpring, value: mode.rawValue)
                                 }
                                 .padding(.vertical, 14)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(AtlasCompactPressButtonStyle())
                             AtlasDivider()
                         }
                     }
@@ -145,6 +172,7 @@ private struct ScanCaptureScreen: View {
     @StateObject private var camera = AtlasCameraController()
     @State private var galleryItem: PhotosPickerItem?
     @State private var galleryImage: UIImage?
+    @State private var shutterFlash = false
 
     var body: some View {
         ZStack {
@@ -153,8 +181,20 @@ private struct ScanCaptureScreen: View {
             cameraContent
 
             if camera.state == .ready {
-                CameraOverlay(mode: mode, camera: camera, close: close, back: back, galleryItem: $galleryItem)
+                CameraOverlay(
+                    mode: mode,
+                    camera: camera,
+                    close: close,
+                    back: back,
+                    galleryItem: $galleryItem,
+                    capture: capturePhoto
+                )
             }
+
+            Color.white
+                .opacity(shutterFlash ? 0.78 : 0)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
         }
         .onAppear { camera.start() }
         .onDisappear { camera.stop() }
@@ -172,6 +212,16 @@ private struct ScanCaptureScreen: View {
                     await MainActor.run { completed(image) }
                 }
             }
+        }
+    }
+
+    private func capturePhoto() {
+        AtlasHaptics.impact(.medium)
+        withAnimation(.easeOut(duration: 0.08)) { shutterFlash = true }
+        camera.capturePhoto()
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(110))
+            withAnimation(.easeOut(duration: 0.14)) { shutterFlash = false }
         }
     }
 
@@ -242,17 +292,27 @@ private struct CameraOverlay: View {
     let close: () -> Void
     let back: () -> Void
     @Binding var galleryItem: PhotosPickerItem?
+    let capture: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            topControls
-            Spacer()
-            context
-            bottomControls
+        ZStack {
+            CameraReticle()
+                .padding(.horizontal, 34)
+                .padding(.vertical, 150)
+                .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                topControls
+                Spacer()
+                context
+                    .atlasStagger(1, distance: 8)
+                bottomControls
+                    .atlasStagger(2, distance: 8)
+            }
+            .padding(.horizontal, 18)
+            .padding(.top, 8)
+            .padding(.bottom, 22)
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 8)
-        .padding(.bottom, 22)
     }
 
     private var topControls: some View {
@@ -315,13 +375,13 @@ private struct CameraOverlay: View {
 
             Spacer()
 
-            Button { camera.capturePhoto() } label: {
+            Button(action: capture) {
                 ZStack {
                     Circle().stroke(.white, lineWidth: 3).frame(width: 74, height: 74)
                     Circle().fill(.white).frame(width: 60, height: 60)
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(AtlasCompactPressButtonStyle())
             .accessibilityLabel("Capturar")
 
             Spacer()
@@ -334,7 +394,7 @@ private struct CameraOverlay: View {
                     .background(Color.black.opacity(0.35))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(AtlasCompactPressButtonStyle())
             .accessibilityLabel("Tipo de captura")
         }
     }
@@ -348,7 +408,7 @@ private struct CameraOverlay: View {
                 .background(Color.black.opacity(0.36))
                 .clipShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasCompactPressButtonStyle())
         .accessibilityLabel(label)
     }
 
@@ -359,6 +419,49 @@ private struct CameraOverlay: View {
         case .vehicle: return "Captura cada lado del vehículo con buena luz."
         default: return "Captura evidencia suficiente para crear un estado confiable."
         }
+    }
+}
+
+private struct CameraReticle: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var revealed = false
+
+    var body: some View {
+        CameraCornerShape()
+            .trim(from: 0, to: reduceMotion || revealed ? 1 : 0)
+            .stroke(Color.white.opacity(0.72), style: StrokeStyle(lineWidth: 1.4, lineCap: .round))
+            .onAppear {
+                if reduceMotion {
+                    revealed = true
+                } else {
+                    withAnimation(.easeOut(duration: 0.55)) { revealed = true }
+                }
+            }
+            .accessibilityHidden(true)
+    }
+}
+
+private struct CameraCornerShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let length = min(rect.width, rect.height) * 0.13
+
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY + length))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.minX + length, y: rect.minY))
+
+        path.move(to: CGPoint(x: rect.maxX - length, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY + length))
+
+        path.move(to: CGPoint(x: rect.maxX, y: rect.maxY - length))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.maxX - length, y: rect.maxY))
+
+        path.move(to: CGPoint(x: rect.minX + length, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY - length))
+        return path
     }
 }
 
@@ -386,9 +489,17 @@ private struct ScanProcessingScreen: View {
                 VStack(spacing: 0) {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         HStack(spacing: 14) {
-                            Image(systemName: index < progress ? "checkmark.circle.fill" : (index == progress ? "circle.dotted" : "circle"))
-                                .foregroundStyle(index < progress ? AtlasColor.healthy : (index == progress ? AtlasColor.blue : AtlasColor.lineStrong))
-                                .frame(width: 24)
+                            Group {
+                                if index < progress {
+                                    AtlasAnimatedCheckmark(color: AtlasColor.healthy, size: 19)
+                                } else if index == progress {
+                                    AtlasProcessingIndicator(color: AtlasColor.blue, size: 18)
+                                } else {
+                                    Image(systemName: "circle")
+                                        .foregroundStyle(AtlasColor.lineStrong)
+                                }
+                            }
+                            .frame(width: 24)
                             Text(step)
                                 .font(AtlasType.body(.body, weight: index == progress ? .semibold : .regular))
                                 .foregroundStyle(index <= progress ? AtlasColor.ink : AtlasColor.inkMuted)
@@ -403,8 +514,9 @@ private struct ScanProcessingScreen: View {
             .padding(22)
             .task {
                 for index in 0..<steps.count {
-                    progress = index
-                    try? await Task.sleep(for: .milliseconds(220))
+                    withAnimation(AtlasMotion.fastAnimation) { progress = index }
+                    AtlasHaptics.selection()
+                    try? await Task.sleep(for: .milliseconds(260))
                 }
                 let result = image.map { image in
                     Task { await AtlasVisionAnalyzer.analyze(image: image) }
@@ -512,10 +624,17 @@ private struct ScanResultScreen: View {
                                 .foregroundStyle(AtlasColor.ink)
                         }
                         .padding(.vertical, 10)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                     }
 
-                    AtlasPrimaryButton(title: "Crear activo", symbol: "plus") { created = true }
-                    AtlasSecondaryButton(title: "Adjuntar a activo existente", symbol: "link") { created = true }
+                    AtlasPrimaryButton(title: "Crear activo", symbol: "plus") {
+                        AtlasHaptics.success()
+                        withAnimation(AtlasMotion.softSpring) { created = true }
+                    }
+                    AtlasSecondaryButton(title: "Adjuntar a activo existente", symbol: "link") {
+                        AtlasHaptics.success()
+                        withAnimation(AtlasMotion.softSpring) { created = true }
+                    }
                     Button("Capturar de nuevo", action: captureAgain)
                         .font(AtlasType.body(.body, weight: .semibold))
                         .foregroundStyle(AtlasColor.blue)

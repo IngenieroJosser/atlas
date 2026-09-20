@@ -51,7 +51,7 @@ struct ReportsScreen: View {
                     }
                     .padding(.vertical, 14)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(AtlasPressButtonStyle())
                 if idx < rows.count - 1 { AtlasDivider() }
             }
         }

@@ -6,24 +6,37 @@ struct AppHeader: View {
     let openNotifications: () -> Void
 
     var body: some View {
-        HStack(spacing: 14) {
-            AtlasMark(size: 32)
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 12) {
+                AtlasMark(size: 30)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("ATLAS")
-                    .font(AtlasType.heading(.headline, weight: .bold))
-                    .tracking(2.2)
-                    .foregroundStyle(AtlasColor.ink)
-                Text(greeting)
-                    .font(AtlasType.body(.caption))
-                    .foregroundStyle(AtlasColor.inkMuted)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("ATLAS")
+                        .font(AtlasType.heading(.headline, weight: .bold))
+                        .tracking(2.4)
+                        .foregroundStyle(AtlasColor.ink)
+                    Text("PHYSICAL INTELLIGENCE")
+                        .font(AtlasType.label(.caption2, weight: .semibold))
+                        .tracking(1.0)
+                        .foregroundStyle(AtlasColor.blue)
+                }
+
+                Spacer()
+                HeaderIcon(symbol: "magnifyingglass", label: "Buscar", action: openSearch)
+                HeaderIcon(symbol: "bell", label: "Notificaciones", action: openNotifications)
             }
 
-            Spacer()
-
-            HeaderIcon(symbol: "magnifyingglass", label: "Buscar", action: openSearch)
-            HeaderIcon(symbol: "bell", label: "Notificaciones", action: openNotifications)
+            HStack(alignment: .firstTextBaseline) {
+                Text(greeting)
+                    .font(AtlasType.body(.subheadline, weight: .medium))
+                    .foregroundStyle(AtlasColor.inkSecondary)
+                Spacer()
+                Text("WORLD / 01")
+                    .font(AtlasType.mono(.caption2, weight: .semibold))
+                    .foregroundStyle(AtlasColor.inkMuted)
+            }
         }
+        .atlasStagger(0, distance: 6)
     }
 }
 
@@ -35,12 +48,14 @@ struct HeaderIcon: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(AtlasColor.ink)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
+                .frame(width: 40, height: 40)
+                .background(AtlasColor.surface)
+                .clipShape(Circle())
+                .overlay { Circle().stroke(AtlasColor.line, lineWidth: 1) }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasCompactPressButtonStyle())
         .accessibilityLabel(label)
     }
 }
@@ -50,13 +65,13 @@ struct MetadataLabel: View {
     let value: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 6) {
             Text(title.uppercased())
-                .font(AtlasType.label(.caption2))
+                .font(AtlasType.label(.caption2, weight: .semibold))
                 .tracking(0.8)
                 .foregroundStyle(AtlasColor.inkMuted)
             Text(value)
-                .font(AtlasType.body(.subheadline, weight: .medium))
+                .font(AtlasType.heading(.subheadline, weight: .semibold))
                 .foregroundStyle(AtlasColor.ink)
         }
     }
@@ -78,6 +93,7 @@ struct StatusBadge: View {
         .background(health.color.opacity(0.08))
         .clipShape(Capsule())
         .accessibilityLabel("Estado: \(health.rawValue)")
+        .animation(AtlasMotion.fastAnimation, value: health.rawValue)
     }
 }
 
@@ -92,6 +108,7 @@ struct SyncBadge: View {
             .padding(.vertical, 5)
             .background(state.color.opacity(0.08))
             .clipShape(Capsule())
+        .animation(AtlasMotion.fastAnimation, value: state.rawValue)
     }
 }
 
@@ -104,18 +121,21 @@ struct Metric: View {
         VStack(alignment: .leading, spacing: 5) {
             Text(value)
                 .font(AtlasType.display(.title, weight: .semibold))
+                .tracking(-0.8)
                 .foregroundStyle(AtlasColor.ink)
+                .contentTransition(.numericText())
             Text(label.uppercased())
                 .font(AtlasType.label(.caption2, weight: .semibold))
-                .tracking(0.8)
-                .foregroundStyle(AtlasColor.inkMuted)
+                .tracking(0.9)
+                .foregroundStyle(AtlasColor.inkSecondary)
             if let footnote {
                 Text(footnote)
-                    .font(AtlasType.body(.caption2))
-                    .foregroundStyle(AtlasColor.inkSecondary)
+                    .font(AtlasType.body(.caption2, weight: .medium))
+                    .foregroundStyle(AtlasColor.inkMuted)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .atlasScaleReveal()
     }
 }
 
@@ -125,47 +145,52 @@ struct AssetRow: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 0) {
-                HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .center, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(AtlasColor.blueSoft)
                     Image(systemName: asset.symbol)
-                        .font(.system(size: 19, weight: .medium))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundStyle(AtlasColor.blue)
-                        .frame(width: 36, height: 36)
+                }
+                .frame(width: 46, height: 46)
 
-                    VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 7) {
                         Text(asset.kind)
                             .font(AtlasType.label(.caption2, weight: .semibold))
-                            .tracking(0.8)
-                            .foregroundStyle(AtlasColor.inkMuted)
-                        Text(asset.name)
-                            .font(AtlasType.heading(.headline, weight: .semibold))
-                            .foregroundStyle(AtlasColor.ink)
-                            .multilineTextAlignment(.leading)
-                        Text(asset.subtitle)
-                            .font(AtlasType.body(.caption))
-                            .foregroundStyle(AtlasColor.inkSecondary)
-                    }
-
-                    Spacer(minLength: 12)
-
-                    VStack(alignment: .trailing, spacing: 8) {
-                        StatusBadge(health: asset.health)
-                        Text(asset.updated)
-                            .font(AtlasType.body(.caption2))
+                            .tracking(0.75)
                             .foregroundStyle(AtlasColor.inkMuted)
                         if asset.changes > 0 {
-                            Text(String(format: "%02d CAMBIOS", asset.changes))
+                            Text("· \(String(format: "%02d", asset.changes)) CAMBIOS")
                                 .font(AtlasType.mono(.caption2, weight: .semibold))
                                 .foregroundStyle(AtlasColor.blue)
                         }
                     }
+                    Text(asset.name)
+                        .font(AtlasType.heading(.headline, weight: .semibold))
+                        .foregroundStyle(AtlasColor.ink)
+                        .multilineTextAlignment(.leading)
+                    Text("\(asset.subtitle) · \(asset.updated)")
+                        .font(AtlasType.body(.caption, weight: .medium))
+                        .foregroundStyle(AtlasColor.inkMuted)
                 }
-                .padding(.vertical, 16)
 
-                AtlasDivider()
+                Spacer(minLength: 10)
+
+                VStack(alignment: .trailing, spacing: 9) {
+                    StatusBadge(health: asset.health)
+                    Image(systemName: "arrow.up.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(AtlasColor.inkMuted)
+                }
             }
+            .padding(.vertical, 15)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
+        .overlay(alignment: .bottom) { AtlasDivider() }
+        .atlasScreenEntrance(distance: 7)
     }
 }
 
@@ -176,27 +201,30 @@ struct WorldStateRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .firstTextBaseline, spacing: 14) {
+            HStack(alignment: .center, spacing: 14) {
                 Text(index)
-                    .font(AtlasType.mono(.caption2, weight: .semibold))
+                    .font(AtlasType.display(.title3, weight: .medium))
+                    .tracking(-0.6)
                     .foregroundStyle(AtlasColor.blue)
-                    .frame(width: 28, alignment: .leading)
+                    .frame(width: 38, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(asset.name)
                         .font(AtlasType.heading(.headline, weight: .semibold))
                         .foregroundStyle(AtlasColor.ink)
-                    Text("\(asset.kind) · \(asset.updated)")
-                        .font(AtlasType.body(.caption))
+                    Text("\(asset.kind) / \(asset.updated)")
+                        .font(AtlasType.body(.caption, weight: .medium))
                         .foregroundStyle(AtlasColor.inkMuted)
                 }
 
                 Spacer()
                 SyncBadge(state: asset.syncState)
             }
-            .padding(.vertical, 14)
+            .padding(.vertical, 15)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
+        .atlasScreenEntrance(distance: 7)
     }
 }
 
@@ -207,41 +235,43 @@ struct ChangeRow: View {
     var body: some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 14) {
-                VStack(spacing: 6) {
-                    Circle()
-                        .fill(change.health.color)
-                        .frame(width: 8, height: 8)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(change.time)
+                        .font(AtlasType.mono(.caption2, weight: .semibold))
+                        .foregroundStyle(AtlasColor.inkMuted)
                     Rectangle()
-                        .fill(AtlasColor.line)
-                        .frame(width: 1, height: 56)
+                        .fill(change.health.color)
+                        .frame(width: 22, height: 2)
                 }
-                .padding(.top, 6)
+                .frame(width: 48, alignment: .leading)
+                .padding(.top, 2)
 
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack {
-                        Text(change.type)
-                            .font(AtlasType.label(.caption2, weight: .semibold))
-                            .tracking(0.8)
-                            .foregroundStyle(change.health.color)
-                        Spacer()
-                        Text(change.time)
-                            .font(AtlasType.mono(.caption2))
-                            .foregroundStyle(AtlasColor.inkMuted)
-                    }
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(change.type)
+                        .font(AtlasType.label(.caption2, weight: .semibold))
+                        .tracking(0.75)
+                        .foregroundStyle(change.health.color)
                     Text(change.title)
                         .font(AtlasType.heading(.headline, weight: .semibold))
                         .foregroundStyle(AtlasColor.ink)
-                    Text(change.asset)
-                        .font(AtlasType.body(.subheadline, weight: .medium))
-                        .foregroundStyle(AtlasColor.inkSecondary)
-                    Text(change.detail)
-                        .font(AtlasType.body(.caption))
+                    Text("\(change.asset) · \(change.detail)")
+                        .font(AtlasType.body(.caption, weight: .medium))
                         .foregroundStyle(AtlasColor.inkMuted)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.bottom, 16)
+
+                Spacer(minLength: 8)
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(AtlasColor.inkMuted)
+                    .padding(.top, 2)
             }
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
+        .overlay(alignment: .bottom) { AtlasDivider() }
+        .atlasScreenEntrance(distance: 7)
     }
 }
 
@@ -251,38 +281,45 @@ struct InspectionRow: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text(inspection.status.uppercased())
-                        .font(AtlasType.label(.caption2, weight: .semibold))
-                        .tracking(0.8)
-                        .foregroundStyle(inspection.progress == 1 ? AtlasColor.healthy : AtlasColor.blue)
-                    Spacer()
-                    Text(inspection.date)
-                        .font(AtlasType.mono(.caption2))
-                        .foregroundStyle(AtlasColor.inkMuted)
-                }
+            HStack(alignment: .top, spacing: 14) {
+                Text(inspection.progress == 1 ? "✓" : inspection.progress > 0 ? "↗" : "○")
+                    .font(AtlasType.display(.title3, weight: .medium))
+                    .foregroundStyle(inspection.progress == 1 ? AtlasColor.healthy : AtlasColor.blue)
+                    .frame(width: 28)
 
-                Text(inspection.title)
-                    .font(AtlasType.heading(.headline, weight: .semibold))
-                    .foregroundStyle(AtlasColor.ink)
-                Text(inspection.asset)
-                    .font(AtlasType.body(.caption))
-                    .foregroundStyle(AtlasColor.inkSecondary)
-
-                if inspection.progress > 0 && inspection.progress < 1 {
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(AtlasColor.line)
-                            Capsule().fill(AtlasColor.blue).frame(width: proxy.size.width * inspection.progress)
-                        }
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(inspection.status.uppercased())
+                            .font(AtlasType.label(.caption2, weight: .semibold))
+                            .tracking(0.75)
+                            .foregroundStyle(inspection.progress == 1 ? AtlasColor.healthy : AtlasColor.blue)
+                        Spacer()
+                        Text(inspection.date)
+                            .font(AtlasType.mono(.caption2))
+                            .foregroundStyle(AtlasColor.inkMuted)
                     }
-                    .frame(height: 3)
+                    Text(inspection.title)
+                        .font(AtlasType.heading(.headline, weight: .semibold))
+                        .foregroundStyle(AtlasColor.ink)
+                    Text(inspection.asset)
+                        .font(AtlasType.body(.caption, weight: .medium))
+                        .foregroundStyle(AtlasColor.inkMuted)
+
+                    if inspection.progress > 0 && inspection.progress < 1 {
+                        GeometryReader { proxy in
+                            ZStack(alignment: .leading) {
+                                Rectangle().fill(AtlasColor.line)
+                                Rectangle().fill(AtlasColor.blue).frame(width: proxy.size.width * inspection.progress)
+                            }
+                        }
+                        .frame(height: 2)
+                        .padding(.top, 4)
+                    }
                 }
             }
-            .padding(.vertical, 15)
+            .padding(.vertical, 14)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
     }
 }
 
@@ -290,29 +327,41 @@ struct EvidenceCard: View {
     let evidence: AtlasEvidence
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Image(systemName: evidence.symbol)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(AtlasColor.blue)
+                Text("EVIDENCIA")
+                    .font(AtlasType.label(.caption2, weight: .semibold))
+                    .tracking(0.8)
+                    .foregroundStyle(AtlasColor.inkMuted)
                 Spacer()
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(AtlasColor.inkMuted)
             }
-            Spacer(minLength: 10)
+
+            Image(systemName: evidence.symbol)
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(AtlasColor.blue)
+                .frame(maxWidth: .infinity, minHeight: 54, alignment: .leading)
+
+            Spacer(minLength: 0)
+
             Text(evidence.title)
                 .font(AtlasType.heading(.headline, weight: .semibold))
                 .foregroundStyle(AtlasColor.ink)
             Text(evidence.detail)
-                .font(AtlasType.body(.caption))
+                .font(AtlasType.body(.caption, weight: .medium))
                 .foregroundStyle(AtlasColor.inkMuted)
         }
         .padding(16)
-        .frame(width: 190, height: 150, alignment: .leading)
+        .frame(width: 202, height: 164, alignment: .leading)
         .background(AtlasColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AtlasColor.line) }
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(AtlasColor.blue).frame(height: 2)
+        }
+        .overlay { RoundedRectangle(cornerRadius: 14).stroke(AtlasColor.line) }
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .atlasScaleReveal()
     }
 }
 
@@ -325,33 +374,36 @@ struct AlertRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(alignment: .top, spacing: 14) {
-                Rectangle()
-                    .fill(color)
-                    .frame(width: 3, height: 62)
-                    .clipShape(Capsule())
+            HStack(alignment: .top, spacing: 13) {
+                Divider()
+                    .frame(width: 3)
+                    .overlay(color)
 
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(level.uppercased())
-                        .font(AtlasType.label(.caption2, weight: .semibold))
-                        .tracking(0.8)
-                        .foregroundStyle(color)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(level.uppercased())
+                            .font(AtlasType.label(.caption2, weight: .semibold))
+                            .tracking(0.8)
+                            .foregroundStyle(color)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(AtlasColor.inkMuted)
+                    }
                     Text(title)
                         .font(AtlasType.heading(.headline, weight: .semibold))
                         .foregroundStyle(AtlasColor.ink)
                     Text(detail)
-                        .font(AtlasType.body(.caption))
+                        .font(AtlasType.body(.caption, weight: .medium))
                         .foregroundStyle(AtlasColor.inkMuted)
                 }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(AtlasColor.inkMuted)
-                    .padding(.top, 20)
+                .padding(.vertical, 5)
             }
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
+        .atlasScreenEntrance(distance: 7)
     }
 }
 
@@ -364,21 +416,21 @@ struct AtlasSearchField: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(AtlasColor.inkMuted)
             TextField(placeholder, text: $text)
-                .font(AtlasType.body(.body))
+                .font(AtlasType.body(.body, weight: .medium))
                 .foregroundStyle(AtlasColor.ink)
             if !text.isEmpty {
                 Button { text = "" } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(AtlasColor.inkMuted)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(AtlasPressButtonStyle())
                 .accessibilityLabel("Limpiar búsqueda")
             }
         }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 48)
-        .background(AtlasColor.surfaceSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(.horizontal, 15)
+        .frame(minHeight: 50)
+        .background(AtlasColor.surface)
+        .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.lineStrong).frame(height: 1) }
     }
 }
 
@@ -390,27 +442,27 @@ struct PrimaryActionRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
+            HStack(spacing: 13) {
                 Image(systemName: symbol)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(AtlasColor.blue)
-                    .frame(width: 34)
-                VStack(alignment: .leading, spacing: 3) {
+                    .frame(width: 30)
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
-                        .font(AtlasType.body(.body, weight: .semibold))
+                        .font(AtlasType.heading(.subheadline, weight: .semibold))
                         .foregroundStyle(AtlasColor.ink)
                     Text(subtitle)
-                        .font(AtlasType.body(.caption))
+                        .font(AtlasType.body(.caption, weight: .medium))
                         .foregroundStyle(AtlasColor.inkMuted)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
+                Image(systemName: "arrow.right")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(AtlasColor.inkMuted)
             }
-            .padding(.vertical, 13)
+            .padding(.vertical, 14)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
     }
 }
 
@@ -420,29 +472,44 @@ struct AIInsight: View {
     let confidence: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                AtlasSectionLabel(index: "AI", title: "ATLAS / INSIGHT")
-                Spacer()
-            }
-            Text(title)
-                .font(AtlasType.heading(.title3, weight: .semibold))
-                .foregroundStyle(AtlasColor.ink)
-            Text(text)
-                .font(AtlasType.body(.body))
-                .foregroundStyle(AtlasColor.inkSecondary)
-                .lineSpacing(4)
-            HStack {
-                Text("EVIDENCIA TRAZABLE")
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .center) {
+                Text("ATLAS / INSIGHT")
                     .font(AtlasType.label(.caption2, weight: .semibold))
-                    .foregroundStyle(AtlasColor.blue)
+                    .tracking(1.0)
+                    .foregroundStyle(Color.white.opacity(0.68))
                 Spacer()
-                Text("CONFIANZA \(confidence)")
+                Text(confidence)
                     .font(AtlasType.mono(.caption2, weight: .semibold))
-                    .foregroundStyle(AtlasColor.inkMuted)
+                    .foregroundStyle(Color.white)
             }
+
+            Rectangle()
+                .fill(AtlasColor.blue)
+                .frame(width: 44, height: 3)
+
+            Text(title)
+                .font(AtlasType.heading(.title2, weight: .semibold))
+                .tracking(-0.5)
+                .foregroundStyle(.white)
+
+            Text(text)
+                .font(AtlasType.body(.body, weight: .regular))
+                .foregroundStyle(Color.white.opacity(0.78))
+                .lineSpacing(4)
+
+            HStack(spacing: 8) {
+                Image(systemName: "link")
+                Text("EVIDENCIA TRAZABLE")
+            }
+            .font(AtlasType.label(.caption2, weight: .semibold))
+            .tracking(0.75)
+            .foregroundStyle(Color.white.opacity(0.72))
         }
-        .padding(.vertical, 18)
+        .padding(20)
+        .background(AtlasColor.navy)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .atlasScaleReveal()
     }
 }
 
@@ -454,15 +521,18 @@ struct ComparisonView: View {
             comparisonState(label: "DESPUÉS", date: "20 SEP", symbol: "square.dashed.inset.filled")
         }
         .background(AtlasColor.surface)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AtlasColor.line) }
+        .overlay(alignment: .top) { Rectangle().fill(AtlasColor.blue).frame(height: 2) }
+        .overlay { RoundedRectangle(cornerRadius: 14).stroke(AtlasColor.line) }
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .atlasScaleReveal()
     }
 
     private func comparisonState(label: String, date: String, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text(label)
                     .font(AtlasType.label(.caption2, weight: .semibold))
+                    .tracking(0.8)
                     .foregroundStyle(AtlasColor.inkMuted)
                 Spacer()
                 Text(date)
@@ -470,11 +540,11 @@ struct ComparisonView: View {
                     .foregroundStyle(AtlasColor.inkMuted)
             }
             Image(systemName: symbol)
-                .font(.system(size: 48, weight: .ultraLight))
+                .font(.system(size: 42, weight: .ultraLight))
                 .foregroundStyle(AtlasColor.blue)
-                .frame(maxWidth: .infinity, minHeight: 90)
+                .frame(maxWidth: .infinity, minHeight: 82)
             Text(label == "ANTES" ? "Estado 017" : "Estado 018")
-                .font(AtlasType.body(.subheadline, weight: .semibold))
+                .font(AtlasType.heading(.subheadline, weight: .semibold))
                 .foregroundStyle(AtlasColor.ink)
         }
         .padding(16)
@@ -488,12 +558,13 @@ struct AtlasLoadingState: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            ProgressView().tint(AtlasColor.blue)
+            AtlasProcessingIndicator(color: AtlasColor.blue, size: 24)
             Text(title).font(AtlasType.heading(.headline)).foregroundStyle(AtlasColor.ink)
             Text(detail).font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted).multilineTextAlignment(.center)
         }
         .padding(.vertical, 36)
         .frame(maxWidth: .infinity)
+        .atlasScaleReveal()
     }
 }
 
@@ -523,6 +594,7 @@ struct AtlasEmptyState: View {
             }
         }
         .padding(.vertical, 28)
+        .atlasScreenEntrance(distance: 10)
     }
 }
 
@@ -543,6 +615,7 @@ struct AtlasErrorState: View {
                 .foregroundStyle(AtlasColor.blue)
         }
         .padding(.vertical, 24)
+        .atlasScaleReveal()
     }
 }
 
@@ -574,6 +647,7 @@ struct PermissionState: View {
         }
         .padding(.horizontal, 24)
         .frame(maxWidth: 520)
+        .atlasScaleReveal()
     }
 }
 
@@ -583,40 +657,43 @@ struct AssetCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 13) {
                 HStack {
-                    Image(systemName: asset.symbol)
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundStyle(AtlasColor.blue)
+                    Text(asset.kind)
+                        .font(AtlasType.label(.caption2, weight: .semibold))
+                        .tracking(0.75)
+                        .foregroundStyle(AtlasColor.inkMuted)
                     Spacer()
-                    StatusBadge(health: asset.health)
+                    Image(systemName: asset.symbol)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(AtlasColor.blue)
                 }
                 Text(asset.name)
-                    .font(AtlasType.heading(.headline, weight: .semibold))
+                    .font(AtlasType.heading(.title3, weight: .semibold))
+                    .tracking(-0.4)
                     .foregroundStyle(AtlasColor.ink)
                     .multilineTextAlignment(.leading)
                 Text(asset.subtitle)
-                    .font(AtlasType.body(.caption))
+                    .font(AtlasType.body(.caption, weight: .medium))
                     .foregroundStyle(AtlasColor.inkMuted)
+                Spacer(minLength: 4)
                 HStack {
+                    StatusBadge(health: asset.health)
+                    Spacer()
                     Text(asset.updated)
                         .font(AtlasType.mono(.caption2))
                         .foregroundStyle(AtlasColor.inkMuted)
-                    Spacer()
-                    if asset.changes > 0 {
-                        Text("\(asset.changes) cambios")
-                            .font(AtlasType.mono(.caption2, weight: .semibold))
-                            .foregroundStyle(AtlasColor.blue)
-                    }
                 }
             }
             .padding(16)
-            .frame(width: 220, alignment: .leading)
+            .frame(width: 224, height: 172, alignment: .leading)
             .background(AtlasColor.surface)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(AtlasColor.line) }
+            .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.blue).frame(height: 2) }
+            .overlay { RoundedRectangle(cornerRadius: 14).stroke(AtlasColor.line) }
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(AtlasPressButtonStyle())
+        .atlasScaleReveal()
     }
 }
 
@@ -648,6 +725,7 @@ struct Timeline: View {
                     Spacer()
                 }
                 .padding(.vertical, 7)
+                .atlasStagger(index, distance: 7, baseDelay: 0.035)
             }
         }
     }
@@ -667,5 +745,6 @@ struct FilterSheet<Content: View>: View {
         }
         .padding(.horizontal, 20)
         .background(AtlasColor.background)
+        .atlasScreenEntrance(distance: 14)
     }
 }

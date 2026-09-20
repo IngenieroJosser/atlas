@@ -36,7 +36,11 @@ struct InspectionsScreen: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(["Todas", "Programadas", "En progreso", "Completadas", "Archivadas"], id: \.self) { item in
-                    Button { segment = item } label: {
+                    Button {
+                        guard segment != item else { return }
+                        AtlasHaptics.selection()
+                        withAnimation(AtlasMotion.fastAnimation) { segment = item }
+                    } label: {
                         Text(item)
                             .font(AtlasType.body(.caption, weight: .semibold))
                             .foregroundStyle(segment == item ? .white : AtlasColor.inkSecondary)
@@ -45,7 +49,7 @@ struct InspectionsScreen: View {
                             .background(segment == item ? AtlasColor.blue : AtlasColor.surfaceSecondary)
                             .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(AtlasCompactPressButtonStyle())
                 }
             }
         }
@@ -56,6 +60,7 @@ struct NewInspectionScreen: View {
     let open: (AtlasRoute) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var currentStep = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let steps = [
         ("01", "VISUAL", "Captura la condición exterior.", "camera.viewfinder"),
@@ -105,6 +110,7 @@ struct NewInspectionScreen: View {
                                                 .foregroundStyle(AtlasColor.inkSecondary)
                                                 .lineSpacing(3)
                                                 .padding(.top, 3)
+                                                .transition(.opacity.combined(with: .move(edge: .top)))
                                         }
                                     }
                                     Spacer()
@@ -114,6 +120,7 @@ struct NewInspectionScreen: View {
                                 .padding(.vertical, 7)
                             }
                         }
+                        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: currentStep)
                     }
                     .padding(20)
                 }
@@ -124,13 +131,20 @@ struct NewInspectionScreen: View {
                         symbol: currentStep == steps.count - 1 ? "checkmark" : "arrow.right"
                     ) {
                         if currentStep == steps.count - 1 {
+                            AtlasHaptics.success()
                             open(.inspectionResult)
                         } else {
-                            currentStep += 1
+                            AtlasHaptics.selection()
+                            if reduceMotion { currentStep += 1 }
+                            else { withAnimation(AtlasMotion.standardAnimation) { currentStep += 1 } }
                         }
                     }
                     if currentStep > 0 {
-                        Button("Paso anterior") { currentStep -= 1 }
+                        Button("Paso anterior") {
+                            AtlasHaptics.selection()
+                            if reduceMotion { currentStep -= 1 }
+                            else { withAnimation(AtlasMotion.standardAnimation) { currentStep -= 1 } }
+                        }
                             .font(AtlasType.body(.subheadline, weight: .semibold))
                             .foregroundStyle(AtlasColor.inkSecondary)
                     }

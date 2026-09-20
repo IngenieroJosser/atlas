@@ -1,44 +1,41 @@
-# ATLAS Design System v10
+# ATLAS Design System v12
 
-## Direction
+## Dirección visual
 
-ATLAS uses an editorial mobile language: large hierarchy, small contextual labels, numbered sections, strong spacing, low decoration, restrained borders, and state colors only when semantic.
+ATLAS adopta una dirección editorial mobile-first: jerarquía tipográfica fuerte, secciones numeradas, microcopy corto, superficies sobrias y una única pieza visual protagonista por pantalla cuando corresponde.
 
-The visual reference is inspired by the compositional discipline of VORON, not its marketplace content or page layout.
+La referencia conceptual proviene de la disciplina de composición de VORON, no de su contenido ni de su estructura de marketplace.
 
-## Color roles
+## Tipografía
 
-- Background: adaptive off-white / deep navy
-- Surface: adaptive white / navy surface
-- Primary: technological blue
-- Text: ink / white depending on system appearance
-- Healthy: green
-- Attention: yellow
-- Warning: orange
-- Critical: red
-- Information: blue
+- **Manrope**: títulos, headings, cifras importantes y mensajes de producto.
+- **Geist**: navegación, labels, metadata, inputs y texto normal.
+- **SF Mono / system monospaced**: IDs, fechas, telemetría y estados técnicos.
 
-## Typography
+Las fuentes se registran con `AtlasFontRegistry` desde `ATLAS/Resources/Fonts`.
+Si las fuentes no están disponibles, la aplicación usa un fallback nativo y sigue compilando.
 
-No external font files are required.
+## Paleta
 
-- Display/heading role: Apple system Rounded, used as a Manrope-like geometric display face.
-- UI/body role: Apple default system face (SF Pro), used as a Geist-like neutral interface face.
-- Telemetry/meta: Apple monospaced system face.
+- Canvas: `#F4F6F8`
+- Navy: `#0A1D33`
+- Cobalt: `#2D63FF`
+- Ink: `#0A1420`
+- Surface: `#FFFFFF`
+- Muted: `#788695`
 
-All typography is defined using semantic TextStyle values to support Dynamic Type.
+Estados:
+- Healthy: `#238B5B`
+- Attention: `#C48A1D`
+- Warning: `#D66B16`
+- Critical: `#C83C4B`
 
-## Shape
+## Reglas
 
-- Main buttons: 12–13 pt corner radius.
-- Entity cards: 16 pt.
-- Small states/filters: capsules only where semantically appropriate.
-- Most content is grouped with spacing and hairline dividers rather than cards.
-
-## Navigation
-
-Bottom navigation:
-
-Mundo · Activos · Escanear · Cambios · Tú
-
-Escanear is visually stronger but remains compact and native to the iPhone layout.
+- No usar cards para cada bloque.
+- Preferir divisores, ritmo, jerarquía y alineación.
+- Un único hero visual fuerte en pantallas importantes.
+- Radius 11–20 según jerarquía; pills solo para estados/filtros.
+- Sombras prácticamente inexistentes.
+- SF Symbols como iconografía base.
+- Acciones primarias cobalt; AI insights en navy.

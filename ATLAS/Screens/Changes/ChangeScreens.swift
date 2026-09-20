@@ -88,6 +88,7 @@ struct CompareScreen: View {
     @Environment(\.dismiss) private var dismiss
     @State private var stateA = "12 SEP"
     @State private var stateB = "20 SEP"
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         AtlasPage {
@@ -108,6 +109,9 @@ struct CompareScreen: View {
                     }
 
                     ComparisonView()
+                        .id("\(stateA)-\(stateB)")
+                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+                        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: "\(stateA)-\(stateB)")
 
                     VStack(alignment: .leading, spacing: 0) {
                         AtlasSectionLabel(index: "01", title: "DIFFERENCES", trailing: "4 cambios")
@@ -139,7 +143,11 @@ struct CompareScreen: View {
                 .foregroundStyle(AtlasColor.inkMuted)
             Menu {
                 ForEach(["03 SEP", "12 SEP", "18 SEP", "20 SEP"], id: \.self) { date in
-                    Button(date) { selection.wrappedValue = date }
+                    Button(date) {
+                        AtlasHaptics.selection()
+                        if reduceMotion { selection.wrappedValue = date }
+                        else { withAnimation(AtlasMotion.standardAnimation) { selection.wrappedValue = date } }
+                    }
                 }
             } label: {
                 HStack {

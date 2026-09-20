@@ -64,7 +64,7 @@ struct MaintenanceScreen: View {
                     }
                     .padding(.vertical, 13)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(AtlasPressButtonStyle())
                 if idx < items.count - 1 { AtlasDivider() }
             }
         }
@@ -176,7 +176,7 @@ struct WorkOrdersScreen: View {
                                     .frame(height: 34)
                                     .background(filter == item ? AtlasColor.blue : AtlasColor.surfaceSecondary)
                                     .clipShape(Capsule())
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(AtlasPressButtonStyle())
                         }
                     }
                     .horizontalScrollIfNeeded()
@@ -203,7 +203,7 @@ struct WorkOrdersScreen: View {
                                 }
                                 .padding(.vertical, 14)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(AtlasPressButtonStyle())
                             AtlasDivider()
                         }
                     }

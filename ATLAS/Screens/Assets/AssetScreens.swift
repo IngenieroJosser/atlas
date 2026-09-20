@@ -36,7 +36,7 @@ struct AssetsScreen: View {
                             .background(AtlasColor.surfaceSecondary)
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(AtlasPressButtonStyle())
                     .accessibilityLabel("Filtros")
                 }
 
@@ -109,7 +109,7 @@ struct SearchScreen: View {
                     }
                     .padding(.vertical, 12)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(AtlasPressButtonStyle())
                 AtlasDivider()
             }
         }
@@ -194,7 +194,7 @@ struct FiltersScreen: View {
                             .background(selection.wrappedValue == value ? AtlasColor.blue : AtlasColor.surfaceSecondary)
                             .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(AtlasPressButtonStyle())
                 }
             }
         }

@@ -31,8 +31,9 @@ struct AskAtlasScreen: View {
                                 AtlasSectionLabel(index: "01", title: "SUGGESTED")
                                 ForEach(suggestions, id: \.self) { suggestion in
                                     Button {
+                                        AtlasHaptics.selection()
                                         prompt = suggestion
-                                        asked = true
+                                        withAnimation(AtlasMotion.standardAnimation) { asked = true }
                                     } label: {
                                         HStack(alignment: .top, spacing: 12) {
                                             Text(suggestion)
@@ -46,12 +47,13 @@ struct AskAtlasScreen: View {
                                         }
                                         .padding(.vertical, 12)
                                     }
-                                    .buttonStyle(.plain)
+                                    .buttonStyle(AtlasPressButtonStyle())
                                     AtlasDivider()
                                 }
                             }
                         } else {
                             response
+                                .transition(.opacity.combined(with: .move(edge: .bottom)))
                         }
                     }
                     .padding(20)
@@ -66,7 +68,10 @@ struct AskAtlasScreen: View {
                         .background(AtlasColor.surfaceSecondary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     Button {
-                        if !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { asked = true }
+                        if !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            AtlasHaptics.impact(.light)
+                            withAnimation(AtlasMotion.standardAnimation) { asked = true }
+                        }
                     } label: {
                         Image(systemName: "arrow.up")
                             .font(.system(size: 16, weight: .bold))
@@ -75,7 +80,7 @@ struct AskAtlasScreen: View {
                             .background(AtlasColor.blue)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(AtlasCompactPressButtonStyle())
                     .accessibilityLabel("Enviar")
                 }
                 .padding(14)
