@@ -259,7 +259,11 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "ATLAS usa la cámara para escanear espacios, objetos y vehículos y crear evidencia visual.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ATLAS usa la cámara para observar activos, capturar evidencia y crear estados del mundo físico.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ATLAS puede asociar ubicación a activos y capturas cuando tú lo autorices.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ATLAS puede usar el micrófono para notas de voz cuando actives esa función.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ATLAS accede a las fotos que selecciones para adjuntarlas como evidencia.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "ATLAS puede usar movimiento para complementar experiencias espaciales compatibles.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -302,7 +306,11 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "ATLAS usa la cámara para escanear espacios, objetos y vehículos y crear evidencia visual.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "ATLAS usa la cámara para observar activos, capturar evidencia y crear estados del mundo físico.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "ATLAS puede asociar ubicación a activos y capturas cuando tú lo autorices.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "ATLAS puede usar el micrófono para notas de voz cuando actives esa función.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "ATLAS accede a las fotos que selecciones para adjuntarlas como evidencia.";
+				INFOPLIST_KEY_NSMotionUsageDescription = "ATLAS puede usar movimiento para complementar experiencias espaciales compatibles.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;

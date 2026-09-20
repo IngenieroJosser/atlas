@@ -14,7 +14,9 @@ enum AtlasCameraState: Equatable {
 
 final class AtlasCameraController: NSObject, ObservableObject, AVCapturePhotoCaptureDelegate {
     @Published private(set) var state: AtlasCameraState = .idle
-    @Published private(set) var captureCount: Int = 0
+    @Published private(set) var captureCount = 0
+    @Published private(set) var lastPhoto: UIImage?
+    @Published var flashEnabled = false
 
     let session = AVCaptureSession()
 
@@ -30,11 +32,7 @@ final class AtlasCameraController: NSObject, ObservableObject, AVCapturePhotoCap
             DispatchQueue.main.async { self.state = .requesting }
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 guard let self else { return }
-                if granted {
-                    self.configureAndStart()
-                } else {
-                    DispatchQueue.main.async { self.state = .denied }
-                }
+                granted ? self.configureAndStart() : DispatchQueue.main.async { self.state = .denied }
             }
         case .denied, .restricted:
             DispatchQueue.main.async { self.state = .denied }
@@ -53,6 +51,9 @@ final class AtlasCameraController: NSObject, ObservableObject, AVCapturePhotoCap
     func capturePhoto() {
         guard state == .ready else { return }
         let settings = AVCapturePhotoSettings()
+        if photoOutput.supportedFlashModes.contains(flashEnabled ? .on : .off) {
+            settings.flashMode = flashEnabled ? .on : .off
+        }
         photoOutput.capturePhoto(with: settings, delegate: self)
     }
 
@@ -96,8 +97,12 @@ final class AtlasCameraController: NSObject, ObservableObject, AVCapturePhotoCap
     }
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard error == nil, photo.fileDataRepresentation() != nil else { return }
+        guard error == nil,
+              let data = photo.fileDataRepresentation(),
+              let image = UIImage(data: data) else { return }
+
         DispatchQueue.main.async {
+            self.lastPhoto = image
             self.captureCount += 1
         }
     }

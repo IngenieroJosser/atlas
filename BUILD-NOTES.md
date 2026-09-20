@@ -1,24 +1,16 @@
-# ATLAS v10 build notes
+# Build notes
 
-## What changed
+- iOS deployment target: 18.0
+- Device family: iPhone only
+- SwiftUI modular source tree is synchronized by the Xcode project.
+- Camera, location, microphone, photos and motion usage descriptions are present in generated Info.plist build settings.
+- `swiftc -parse` passes for every Swift source file in this package.
+- A full iOS SDK build must still be run on macOS/Xcode because the packaging environment does not include Apple SDKs or xcodebuild.
 
-- Rebuilt the visual language around an editorial, section-driven mobile composition.
-- Preserved the ATLAS v9 light color palette.
-- Reworked the Home screen into four numbered sections with hero, live preview, asset selection, intelligence actions and a 4-step product flow.
-- Reworked Assets and Changes index screens.
-- Updated shared components and typography so the visual change propagates across the whole app.
-- Preserved the real AVFoundation camera flow from v9.1.
-- Preserved AppIcon, camera permission text and iOS 18 deployment target.
+Recommended after replacing a previous version:
 
-## Validation performed
-
-- Swift syntax parse passed for every `.swift` file.
-- 23 Swift files found.
-- 40 AtlasRoute cases found and all 40 are handled by ContentView.
-- No duplicate declared type names detected.
-- AtlasCamera imports Combine and remains ObservableObject-compatible.
-- NSCameraUsageDescription remains configured in the Xcode project.
-
-## Xcode
-
-Open `ATLAS.xcodeproj`, then use Product > Clean Build Folder before the first run if replacing an older version.
+1. Open this `ATLAS.xcodeproj` directly.
+2. Product → Clean Build Folder.
+3. Select your physical iPhone.
+4. Run with Command + R.
+5. Accept camera permission when ATLAS first opens the scanner.

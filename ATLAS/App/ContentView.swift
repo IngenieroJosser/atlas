@@ -1,5 +1,36 @@
 import SwiftUI
 
+struct AtlasRootView: View {
+    @AppStorage("atlas.didOnboard") private var didOnboard = false
+    @AppStorage("atlas.authenticated") private var authenticated = false
+    @State private var splashFinished = false
+
+    var body: some View {
+        Group {
+            if !splashFinished {
+                SplashScreen()
+                    .transition(.opacity)
+            } else if !didOnboard {
+                OnboardingScreen {
+                    didOnboard = true
+                }
+            } else if !authenticated {
+                LoginScreen(
+                    continueAction: { authenticated = true },
+                    createAction: { authenticated = true }
+                )
+            } else {
+                ContentView()
+            }
+        }
+        .animation(.easeOut(duration: 0.24), value: splashFinished)
+        .task {
+            try? await Task.sleep(for: .milliseconds(900))
+            splashFinished = true
+        }
+    }
+}
+
 struct ContentView: View {
     @State private var selectedTab: AtlasTab = .world
     @State private var path: [AtlasRoute] = []
@@ -7,36 +38,28 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack(path: $path) {
-            ZStack(alignment: .bottom) {
-                AtlasBackdrop()
-
+            AtlasPage {
                 Group {
                     switch selectedTab {
                     case .world:
-                        WorldScreen(
-                            open: { path.append($0) },
-                            startScan: { activeSheet = .scan }
-                        )
+                        WorldScreen(open: open, startScan: startScan)
                     case .assets:
-                        AssetsScreen(open: { path.append($0) })
+                        AssetsScreen(open: open, startScan: startScan)
                     case .changes:
-                        ChangesScreen(open: { path.append($0) })
+                        ChangesScreen(open: open)
                     case .profile:
-                        ProfileScreen(open: { path.append($0) })
+                        ProfileScreen(open: open)
                     }
                 }
-                .padding(.bottom, 94)
-
-                AtlasDock(selectedTab: $selectedTab) {
-                    activeSheet = .scan
-                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                BottomNavigation(selectedTab: $selectedTab, startScan: startScan)
             }
             .navigationDestination(for: AtlasRoute.self) { route in
                 routeView(route)
             }
             .toolbar(.hidden, for: .navigationBar)
         }
-        .preferredColorScheme(.light)
         .fullScreenCover(item: $activeSheet) { sheet in
             switch sheet {
             case .scan:
@@ -45,89 +68,47 @@ struct ContentView: View {
         }
     }
 
+    private func open(_ route: AtlasRoute) {
+        path.append(route)
+    }
+
+    private func startScan() {
+        activeSheet = .scan
+    }
+
     @ViewBuilder
     private func routeView(_ route: AtlasRoute) -> some View {
         switch route {
-        case .search:
-            SearchScreen()
-        case .notifications:
-            NotificationsScreen()
-        case .alerts:
-            AlertsScreen(open: { path.append($0) })
-        case .reports:
-            ReportsScreen(open: { path.append($0) })
-        case .reportDetail:
-            ReportDetailScreen(open: { path.append($0) })
-        case .reportExport:
-            ReportExportScreen()
-        case .assetDetail:
-            AssetDetailScreen(open: { path.append($0) })
-        case .addAsset:
-            AddAssetScreen()
-        case .editAsset:
-            EditAssetScreen()
-        case .spatialMap:
-            SpatialMapScreen()
-        case .digitalTwin:
-            DigitalTwinScreen()
-        case .inspections:
-            InspectionsScreen(open: { path.append($0) })
-        case .inspectionDetail:
-            InspectionDetailScreen(open: { path.append($0) })
-        case .findings:
-            FindingsScreen(open: { path.append($0) })
-        case .findingDetail:
-            FindingDetailScreen()
-        case .evidence:
-            EvidenceScreen()
-        case .maintenance:
-            MaintenanceScreen(open: { path.append($0) })
-        case .workOrderDetail:
-            WorkOrderDetailScreen()
-        case .askAtlas:
-            AskAtlasScreen()
-        case .aiHistory:
-            AIHistoryScreen()
-        case .compare:
-            CompareScreen()
-        case .activityLog:
-            ActivityLogScreen()
-        case .settings:
-            SettingsScreen(open: { path.append($0) })
-        case .account:
-            AccountScreen()
-        case .organization:
-            OrganizationScreen()
-        case .team:
-            TeamScreen()
-        case .subscription:
-            SubscriptionScreen()
-        case .integrations:
-            IntegrationsScreen()
-        case .security:
-            SecurityScreen()
-        case .syncStorage:
-            SyncStorageScreen()
-        case .permissions:
-            PermissionsScreen()
-        case .privacy:
-            PrivacyScreen()
-        case .help:
-            HelpScreen()
-        case .about:
-            AboutScreen()
-        case .onboarding:
-            OnboardingPreviewScreen()
-        case .login:
-            LoginPreviewScreen(open: { path.append($0) })
-        case .forgotPassword:
-            ForgotPasswordScreen()
-        case .verification:
-            VerificationScreen()
-        case .createAccount:
-            CreateAccountPreviewScreen(open: { path.append($0) })
-        case .screenMap:
-            ScreenMapScreen(open: { path.append($0) })
+        case .search: SearchScreen(open: open)
+        case .filters: FiltersScreen()
+        case .notifications: NotificationsScreen(open: open)
+        case .alerts: AlertsScreen(open: open)
+        case .reports: ReportsScreen(open: open)
+        case .reportDetail: ReportDetailScreen()
+        case .assetDetail: AssetDetailScreen(open: open, startScan: startScan)
+        case .addAsset: CreateAssetScreen()
+        case .digitalTwin: DigitalTwinScreen()
+        case .inspections: InspectionsScreen(open: open)
+        case .newInspection: NewInspectionScreen(open: open)
+        case .inspectionResult: InspectionResultScreen(open: open)
+        case .changeDetail: ChangeDetailScreen(open: open)
+        case .compare: CompareScreen()
+        case .anomalyDetail: AnomalyDetailScreen(open: open)
+        case .maintenance: MaintenanceScreen(open: open)
+        case .maintenanceDetail: MaintenanceDetailScreen(open: open)
+        case .workOrders: WorkOrdersScreen(open: open)
+        case .createWorkOrder: CreateWorkOrderScreen()
+        case .workOrderDetail: WorkOrderDetailScreen(open: open)
+        case .askAtlas: AskAtlasScreen(open: open)
+        case .atlasInsight: AtlasInsightScreen(open: open)
+        case .organization: OrganizationScreen()
+        case .integrations: IntegrationsScreen()
+        case .security: SecurityScreen()
+        case .privacy: PrivacyScreen()
+        case .permissions: DevicePermissionsScreen()
+        case .help: HelpScreen()
+        case .settings: SettingsScreen(open: open)
+        case .about: AboutScreen()
         }
     }
 }

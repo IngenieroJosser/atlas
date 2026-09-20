@@ -1,64 +1,53 @@
 import SwiftUI
 
-struct AtlasDock: View {
+struct BottomNavigation: View {
     @Binding var selectedTab: AtlasTab
     let startScan: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            dockButton(.world)
-            dockButton(.assets)
+        HStack(spacing: 0) {
+            tab(.world)
+            tab(.assets)
 
             Button(action: startScan) {
-                HStack(spacing: 7) {
+                VStack(spacing: 5) {
                     Image(systemName: "viewfinder")
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 19, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 46, height: 38)
+                        .background(AtlasColor.blue)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     Text("Escanear")
-                        .font(AtlasType.ui(11.5, weight: .semibold))
+                        .font(AtlasType.label(.caption2, weight: .semibold))
+                        .foregroundStyle(AtlasColor.blue)
                 }
-                .foregroundStyle(.white)
-                .padding(.horizontal, 14)
-                .frame(height: 44)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(AtlasColor.electric))
+                .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Escanear")
 
-            dockButton(.changes)
-            dockButton(.profile)
+            tab(.changes)
+            tab(.profile)
         }
-        .padding(7)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.white.opacity(0.98))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(AtlasColor.border, lineWidth: 1))
-                .shadow(color: AtlasColor.shadow, radius: 18, y: 8)
-        )
-        .padding(.horizontal, 14)
-        .padding(.bottom, 8)
+        .padding(.horizontal, 6)
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) { AtlasDivider() }
     }
 
-    @ViewBuilder
-    private func dockButton(_ tab: AtlasTab) -> some View {
+    private func tab(_ tab: AtlasTab) -> some View {
         Button {
-            withAnimation(.easeOut(duration: 0.18)) {
-                selectedTab = tab
-            }
+            selectedTab = tab
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 5) {
                 Image(systemName: tab.symbol)
-                    .font(.system(size: 13, weight: selectedTab == tab ? .semibold : .regular))
+                    .font(.system(size: 16, weight: selectedTab == tab ? .semibold : .regular))
                 Text(tab.title)
-                    .font(AtlasType.ui(8.5, weight: selectedTab == tab ? .semibold : .medium))
-                    .lineLimit(1)
+                    .font(AtlasType.label(.caption2, weight: selectedTab == tab ? .semibold : .medium))
             }
-            .foregroundStyle(selectedTab == tab ? AtlasColor.porcelain : AtlasColor.smoke)
-            .frame(maxWidth: .infinity)
-            .frame(height: 44)
-            .background(
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(selectedTab == tab ? AtlasColor.voidSoft : Color.clear)
-            )
+            .foregroundStyle(selectedTab == tab ? AtlasColor.blue : AtlasColor.inkMuted)
+            .frame(maxWidth: .infinity, minHeight: 44)
         }
         .buttonStyle(.plain)
     }

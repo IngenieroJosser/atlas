@@ -1,35 +1,44 @@
-# ATLAS v10 — Voron-guided visual system
+# ATLAS Design System v10
 
-ATLAS v10 keeps the v9 color palette but changes the composition model.
+## Direction
 
-## Visual principles
+ATLAS uses an editorial mobile language: large hierarchy, small contextual labels, numbered sections, strong spacing, low decoration, restrained borders, and state colors only when semantic.
 
-- Strong hero message before dashboard data.
-- Editorial section numbering: `(01) / ...`.
-- Flat white surfaces with thin borders instead of stacked glass cards.
-- Large SF Pro hierarchy for headlines; SF Mono only for metadata.
-- Live-preview modules that feel like a product/system preview.
-- Metrics are exposed as information strips, not dashboard widgets.
-- Flows are explained as sequential steps.
-- SF Symbols only for application icons.
+The visual reference is inspired by the compositional discipline of VORON, not its marketplace content or page layout.
 
-## Palette
+## Color roles
 
-- Background: `#F5F7FB`
-- Surface: `#FFFFFF`
-- Ink: `#101828`
-- Secondary text: `#667085`
-- Electric blue: `#315CF6`
-- Aqua: `#16A085`
-- Amber: `#E89A20`
-- Violet: `#7A5AF8`
-- Danger: `#E5484D`
+- Background: adaptive off-white / deep navy
+- Surface: adaptive white / navy surface
+- Primary: technological blue
+- Text: ink / white depending on system appearance
+- Healthy: green
+- Attention: yellow
+- Warning: orange
+- Critical: red
+- Information: blue
 
 ## Typography
 
-All typography uses Apple system fonts; there are no external font files.
+No external font files are required.
 
-- `AtlasType.display`: SF Pro system/default, bold hierarchy.
-- `AtlasType.ui`: SF Pro system/default for interface copy.
-- `AtlasType.rounded`: used selectively for compact numerical UI.
-- `AtlasType.mono`: system monospaced for IDs, indices and telemetry.
+- Display/heading role: Apple system Rounded, used as a Manrope-like geometric display face.
+- UI/body role: Apple default system face (SF Pro), used as a Geist-like neutral interface face.
+- Telemetry/meta: Apple monospaced system face.
+
+All typography is defined using semantic TextStyle values to support Dynamic Type.
+
+## Shape
+
+- Main buttons: 12–13 pt corner radius.
+- Entity cards: 16 pt.
+- Small states/filters: capsules only where semantically appropriate.
+- Most content is grouped with spacing and hairline dividers rather than cards.
+
+## Navigation
+
+Bottom navigation:
+
+Mundo · Activos · Escanear · Cambios · Tú
+
+Escanear is visually stronger but remains compact and native to the iPhone layout.
