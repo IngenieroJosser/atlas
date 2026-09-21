@@ -4,295 +4,253 @@ struct WorldScreen: View {
     let open: (AtlasRoute) -> Void
     let startScan: () -> Void
 
-    @ObservedObject private var connectivity = AtlasConnectivityMonitor.shared
+    @EnvironmentObject private var store: AtlasAppStore
+    @StateObject private var connectivity = AtlasConnectivityMonitor.shared
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 34) {
+            LazyVStack(alignment: .leading, spacing: 30) {
                 AppHeader(
-                    greeting: "Buenos días · 3 señales requieren atención",
+                    greeting: greeting,
                     openSearch: { open(.search) },
                     openNotifications: { open(.notifications) }
                 )
-                .atlasStagger(0, distance: 6)
 
-                if !connectivity.isConnected {
-                    offlineBanner
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                worldHero
+                metrics
+                attentionSection
+                recentStatesSection
+                changesSection
+                upcomingSection
+
+                if let error = store.errorMessage {
+                    AtlasErrorState(title: "No pudimos actualizar Mundo", detail: error) {
+                        Task { await store.refreshWorld() }
+                    }
                 }
-
-                worldHero.atlasStagger(1)
-                attention.atlasStagger(2)
-                recentStates.atlasStagger(3)
-                importantChanges.atlasStagger(4)
-                upcoming.atlasStagger(5)
             }
             .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 30)
+            .padding(.top, 18)
+            .padding(.bottom, 26)
         }
-        .animation(AtlasMotion.standardAnimation, value: connectivity.isConnected)
+        .refreshable { await store.refreshWorld() }
+        .task {
+            if store.worldOverview == nil { await store.refreshWorld() }
+            if connectivity.isConnected { await store.flushOfflineQueueIfPossible() }
+        }
+    }
+
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let firstName = store.profile?.user.fullName.split(separator: " ").first.map(String.init) ?? ""
+        let base: String
+        switch hour {
+        case 5..<12: base = "Buenos días"
+        case 12..<19: base = "Buenas tardes"
+        default: base = "Buenas noches"
+        }
+        return firstName.isEmpty ? base : "\(base), \(firstName)"
     }
 
     private var worldHero: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                AtlasColor.navy
+        ZStack(alignment: .bottomLeading) {
+            AtlasColor.navy
+            AtlasGridPattern(spacing: 26)
+                .opacity(0.14)
+                .allowsHitTesting(false)
 
-                WorldGrid()
-                    .opacity(0.18)
-
-                Circle()
-                    .stroke(Color.white.opacity(0.16), lineWidth: 1)
-                    .frame(width: 170, height: 170)
-                    .offset(x: 205, y: 90)
-
-                Circle()
-                    .fill(AtlasColor.blue)
-                    .frame(width: 10, height: 10)
-                    .offset(x: 276, y: 168)
-
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack {
-                        HStack(spacing: 8) {
-                            Circle()
-                                .fill(connectivity.isConnected ? AtlasColor.healthy : AtlasColor.attention)
-                                .frame(width: 7, height: 7)
-                            Text(connectivity.isConnected ? "WORLD / LIVE" : "WORLD / LOCAL")
-                                .font(AtlasType.label(.caption2, weight: .semibold))
-                                .tracking(1.0)
-                        }
-                        .foregroundStyle(Color.white.opacity(0.72))
-
-                        Spacer()
-
-                        Text("20 SEP · 16:39")
-                            .font(AtlasType.mono(.caption2, weight: .medium))
-                            .foregroundStyle(Color.white.opacity(0.5))
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
+                    Text("(01) / WORLD / OVERVIEW").font(AtlasType.label(.caption, weight: .semibold)).tracking(0.8).foregroundStyle(Color.white.opacity(0.68))
+                    Spacer()
+                    HStack(spacing: 7) {
+                        Circle()
+                            .fill(connectivity.isConnected ? AtlasColor.healthy : AtlasColor.warning)
+                            .frame(width: 7, height: 7)
+                        Text(connectivity.isConnected ? "LIVE" : "LOCAL")
+                            .font(AtlasType.mono(.caption2, weight: .semibold))
+                            .foregroundStyle(Color.white.opacity(0.78))
                     }
+                }
 
-                    Text("Tu mundo físico,\nleído con contexto.")
-                        .font(AtlasType.display(.largeTitle, weight: .semibold))
-                        .tracking(-1.35)
-                        .foregroundStyle(.white)
-                        .fixedSize(horizontal: false, vertical: true)
+                Text("¿Qué está pasando\nen tu mundo físico?")
+                    .font(AtlasType.display(.largeTitle, weight: .semibold))
+                    .tracking(-1.35)
+                    .foregroundStyle(.white)
 
-                    Text("ATLAS conecta estados, evidencia y cambios para que veas qué importa antes de entrar al detalle.")
-                        .font(AtlasType.body(.body, weight: .regular))
-                        .foregroundStyle(Color.white.opacity(0.72))
-                        .lineSpacing(4)
-                        .frame(maxWidth: 330, alignment: .leading)
+                Text(connectivity.isConnected
+                     ? "ATLAS conecta estados, cambios y acciones en una sola memoria operativa."
+                     : "Sin conexión. Las capturas pueden permanecer locales y se sincronizarán cuando vuelva la red.")
+                    .font(AtlasType.body(.body))
+                    .foregroundStyle(Color.white.opacity(0.7))
+                    .lineSpacing(4)
 
-                    HStack(spacing: 10) {
-                        Button(action: startScan) {
-                            HStack(spacing: 9) {
-                                Image(systemName: "viewfinder")
-                                Text("Escanear ahora")
-                            }
+                HStack(spacing: 10) {
+                    Button(action: startScan) {
+                        Label("Escanear", systemImage: "viewfinder")
                             .font(AtlasType.body(.subheadline, weight: .semibold))
                             .foregroundStyle(AtlasColor.navy)
-                            .padding(.horizontal, 15)
-                            .frame(height: 46)
+                            .padding(.horizontal, 16)
+                            .frame(height: 44)
                             .background(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
-                        }
-                        .buttonStyle(AtlasPressButtonStyle())
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    }
+                    .buttonStyle(AtlasCompactPressButtonStyle())
 
-                        Button { open(.askAtlas) } label: {
-                            HStack(spacing: 9) {
-                                Image(systemName: "sparkles")
-                                Text("Preguntar")
-                            }
+                    Button { open(.askAtlas) } label: {
+                        Label("Ask ATLAS", systemImage: "sparkles")
                             .font(AtlasType.body(.subheadline, weight: .semibold))
                             .foregroundStyle(.white)
-                            .padding(.horizontal, 15)
-                            .frame(height: 46)
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                            }
-                        }
-                        .buttonStyle(AtlasPressButtonStyle())
+                            .padding(.horizontal, 16)
+                            .frame(height: 44)
+                            .overlay { RoundedRectangle(cornerRadius: 10).stroke(Color.white.opacity(0.24)) }
+                    }
+                    .buttonStyle(AtlasCompactPressButtonStyle())
+                }
+
+                if store.pendingOfflineOperations > 0 {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                        Text("\(store.pendingOfflineOperations) operaciones pendientes de sincronizar")
+                    }
+                    .font(AtlasType.body(.caption, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.72))
+                }
+            }
+            .padding(22)
+        }
+        .frame(minHeight: 330)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .atlasScreenEntrance(distance: 9)
+    }
+
+    private var metrics: some View {
+        let overview = store.worldOverview
+        return VStack(alignment: .leading, spacing: 16) {
+            AtlasSectionLabel(index: "02", title: "SEÑALES")
+            HStack(alignment: .top, spacing: 8) {
+                Metric(value: String(overview?.assetsTotal ?? store.assets.count), label: "Activos")
+                Metric(value: String(overview?.monitoredAssets ?? store.assets.filter { $0.latestStateAt != nil }.count), label: "Monitoreados")
+                Metric(value: String(overview?.recentChanges ?? store.changes.count), label: "Cambios")
+                Metric(value: String(overview?.requiresAttention ?? store.anomalies.filter { $0.status != "dismissed" }.count), label: "Atención")
+            }
+            if let last = overview?.lastSyncAt ?? store.lastSuccessfulRefresh {
+                Text("Última sincronización · \(last.atlasRelative)")
+                    .font(AtlasType.body(.caption, weight: .medium))
+                    .foregroundStyle(AtlasColor.inkMuted)
+            }
+        }
+    }
+
+    private var attentionSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AtlasSectionLabel(index: "03", title: "REQUIERE ATENCIÓN", trailing: String(format: "%02d", activeAnomalies.count))
+            if activeAnomalies.isEmpty {
+                AtlasEmptyState(title: "Sin alertas abiertas", detail: "ATLAS no registra anomalías pendientes en este momento.", symbol: "checkmark.seal")
+            } else {
+                ForEach(activeAnomalies.prefix(3)) { anomaly in
+                    AlertRow(
+                        level: anomaly.severity,
+                        title: anomaly.title,
+                        detail: [assetName(anomaly.assetId), anomaly.locationText].filter { !$0.isEmpty }.joined(separator: " · "),
+                        color: anomaly.severity.atlasHealth.color
+                    ) {
+                        Task { await store.selectAnomaly(anomaly.id); open(.anomalyDetail) }
                     }
                 }
-                .padding(20)
-            }
-            .frame(minHeight: 330)
-
-            HStack(spacing: 0) {
-                heroMetric("12", "ACTIVOS")
-                heroRule
-                heroMetric("03", "ATENCIÓN")
-                heroRule
-                heroMetric("41", "CAMBIOS")
-                heroRule
-                heroMetric("98%", "SYNC")
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 86)
-            .background(AtlasColor.surface)
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(AtlasColor.line, lineWidth: 1)
-        }
-    }
-
-    private func heroMetric(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value)
-                .font(AtlasType.heading(.title3, weight: .semibold))
-                .tracking(-0.6)
-                .foregroundStyle(AtlasColor.ink)
-            Text(label)
-                .font(AtlasType.label(.caption2, weight: .semibold))
-                .tracking(0.75)
-                .foregroundStyle(AtlasColor.inkMuted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var heroRule: some View {
-        Rectangle()
-            .fill(AtlasColor.line)
-            .frame(width: 1, height: 44)
-            .padding(.horizontal, 8)
-    }
-
-    private var attention: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            AtlasSectionLabel(index: "02", title: "REQUIERE ATENCIÓN", trailing: "03 activos")
-
-            Text("Lo que necesita una decisión.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-
-            AlertRow(
-                level: "ALTA",
-                title: "Posible humedad recurrente",
-                detail: "Apartamento Norte · cocina · hace 18 min",
-                color: AtlasColor.critical,
-                action: { open(.anomalyDetail) }
-            )
-            AtlasDivider()
-            AlertRow(
-                level: "MEDIA",
-                title: "Cambio visual sin clasificar",
-                detail: "Vehículo diario · puerta izquierda · hace 2 h",
-                color: AtlasColor.attention,
-                action: { open(.changeDetail) }
-            )
-
-            Button("Ver todas las alertas →") { open(.alerts) }
-                .font(AtlasType.body(.subheadline, weight: .semibold))
-                .foregroundStyle(AtlasColor.blue)
-                .padding(.top, 3)
-        }
-    }
-
-    private var recentStates: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            AtlasSectionLabel(index: "03", title: "ESTADOS RECIENTES", trailing: "5 capturas")
-
-            Text("La memoria más reciente de tus activos.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-                .padding(.bottom, 2)
-
-            ForEach(Array(AtlasSampleData.assets.prefix(3).enumerated()), id: \.element.id) { index, asset in
-                WorldStateRow(index: String(format: "%02d", index + 1), asset: asset) {
-                    open(.assetDetail)
+                if activeAnomalies.count > 3 {
+                    Button("Ver todas las alertas →") { open(.alerts) }
+                        .font(AtlasType.body(.subheadline, weight: .semibold))
+                        .foregroundStyle(AtlasColor.blue)
                 }
-                if index < 2 { AtlasDivider() }
             }
         }
     }
 
-    private var importantChanges: some View {
+    private var recentStatesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AtlasSectionLabel(index: "04", title: "CAMBIOS", trailing: "Memoria física")
-
-            Text("Qué cambió desde la última vez.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-                .padding(.bottom, 2)
-
-            ForEach(AtlasSampleData.changes.prefix(2)) { change in
-                ChangeRow(change: change) { open(.changeDetail) }
+            AtlasSectionLabel(index: "04", title: "RECENT WORLD STATES")
+            let recent = store.assets.filter { $0.latestStateAt != nil }.sorted { ($0.latestStateAt ?? .distantPast) > ($1.latestStateAt ?? .distantPast) }
+            if recent.isEmpty {
+                AtlasEmptyState(title: "Todavía no hay estados", detail: "Escanea tu primer activo para construir su memoria física.", symbol: "square.stack.3d.up")
+            } else {
+                ForEach(Array(recent.prefix(4).enumerated()), id: \.element.id) { index, asset in
+                    WorldStateRow(index: String(format: "%02d", index + 1), asset: asset.presentation) {
+                        Task { await store.selectAsset(asset.id); open(.assetDetail) }
+                    }
+                    if index < min(recent.count, 4) - 1 { AtlasDivider() }
+                }
             }
-
-            Button("Abrir memoria completa →") { open(.compare) }
-                .font(AtlasType.body(.subheadline, weight: .semibold))
-                .foregroundStyle(AtlasColor.blue)
-                .padding(.top, 2)
         }
     }
 
-    private var upcoming: some View {
+    private var changesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AtlasSectionLabel(index: "05", title: "PRÓXIMAMENTE", trailing: "2 acciones")
-
-            Text("Lo siguiente, sin ruido.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-                .padding(.bottom, 2)
-
-            InspectionRow(inspection: AtlasSampleData.inspections[0]) { open(.inspections) }
-            AtlasDivider()
-            PrimaryActionRow(
-                title: "Mantenimiento preventivo",
-                subtitle: "Unidad M-028 · mañana",
-                symbol: "wrench.and.screwdriver"
-            ) { open(.maintenance) }
+            AtlasSectionLabel(index: "05", title: "CHANGES", trailing: String(format: "%02d", store.changes.count))
+            if store.changes.isEmpty {
+                AtlasEmptyState(title: "Sin cambios detectados", detail: "Cuando existan dos estados comparables aparecerán aquí.", symbol: "clock.arrow.circlepath")
+            } else {
+                ForEach(store.changes.prefix(4)) { change in
+                    ChangeRow(change: change.presentation(assetName: assetName(change.assetId))) {
+                        Task { await store.selectChange(change.id); open(.changeDetail) }
+                    }
+                }
+            }
         }
     }
 
-    private var offlineBanner: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Rectangle()
-                .fill(AtlasColor.attention)
-                .frame(width: 3)
+    private var upcomingSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AtlasSectionLabel(index: "06", title: "UPCOMING")
+            let nextInspections = store.inspections.filter { $0.status.lowercased() != "completed" }.prefix(2)
+            let nextMaintenance = store.maintenance.filter { $0.status.lowercased() != "completed" }.prefix(2)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Trabajando en local")
-                    .font(AtlasType.heading(.subheadline, weight: .semibold))
-                    .foregroundStyle(AtlasColor.ink)
-                Text("Puedes seguir capturando evidencia. ATLAS sincronizará cuando vuelva la conexión.")
-                    .font(AtlasType.body(.caption, weight: .medium))
-                    .foregroundStyle(AtlasColor.inkSecondary)
+            if nextInspections.isEmpty && nextMaintenance.isEmpty {
+                AtlasEmptyState(title: "Nada pendiente", detail: "No hay inspecciones ni mantenimiento próximos.", symbol: "calendar.badge.checkmark")
+            } else {
+                ForEach(Array(nextInspections)) { inspection in
+                    PrimaryActionRow(
+                        title: inspection.title,
+                        subtitle: "Inspección · \(assetName(inspection.assetId)) · \((inspection.scheduledFor ?? inspection.createdAt).atlasRelative)",
+                        symbol: "checklist"
+                    ) {
+                        Task { await store.selectInspection(inspection.id); open(.inspectionResult) }
+                    }
+                }
+                ForEach(Array(nextMaintenance)) { task in
+                    PrimaryActionRow(
+                        title: task.title,
+                        subtitle: "Mantenimiento · \(assetName(task.assetId)) · \((task.dueAt ?? task.createdAt).atlasRelative)",
+                        symbol: "wrench.and.screwdriver"
+                    ) {
+                        Task { await store.selectMaintenance(task.id); open(.maintenanceDetail) }
+                    }
+                }
             }
-            Spacer()
-            SyncBadge(state: .local)
         }
-        .padding(.vertical, 12)
+    }
+
+    private var activeAnomalies: [APIAnomaly] {
+        store.anomalies.filter { !["dismissed", "resolved", "closed"].contains($0.status.lowercased()) }
+    }
+
+    private func assetName(_ id: String) -> String {
+        store.assets.first(where: { $0.id == id })?.name ?? "Activo"
     }
 }
 
-private struct WorldGrid: View {
+private struct AtlasGridPattern: View {
+    let spacing: CGFloat
     var body: some View {
-        GeometryReader { proxy in
-            Path { path in
-                let step: CGFloat = 34
-                var x: CGFloat = 0
-                while x <= proxy.size.width {
-                    path.move(to: CGPoint(x: x, y: 0))
-                    path.addLine(to: CGPoint(x: x, y: proxy.size.height))
-                    x += step
-                }
-                var y: CGFloat = 0
-                while y <= proxy.size.height {
-                    path.move(to: CGPoint(x: 0, y: y))
-                    path.addLine(to: CGPoint(x: proxy.size.width, y: y))
-                    y += step
-                }
+        Canvas { context, size in
+            var path = Path()
+            stride(from: CGFloat.zero, through: size.width, by: spacing).forEach { x in
+                path.move(to: CGPoint(x: x, y: 0)); path.addLine(to: CGPoint(x: x, y: size.height))
             }
-            .stroke(Color.white.opacity(0.22), lineWidth: 0.5)
+            stride(from: CGFloat.zero, through: size.height, by: spacing).forEach { y in
+                path.move(to: CGPoint(x: 0, y: y)); path.addLine(to: CGPoint(x: size.width, y: y))
+            }
+            context.stroke(path, with: .color(.white), lineWidth: 0.5)
         }
-        .allowsHitTesting(false)
     }
 }

@@ -2,27 +2,28 @@ import SwiftUI
 
 struct InspectionsScreen: View {
     let open: (AtlasRoute) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var segment = "Todas"
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    AtlasEditorialHeader(
-                        eyebrow: "INSPECTIONS",
-                        title: "Inspecciones guiadas, evidencia primero.",
-                        subtitle: "Programadas, en progreso, completadas y archivadas.",
-                        backAction: { dismiss() },
-                        trailingSymbol: "plus",
-                        trailingAction: { open(.newInspection) }
-                    )
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    HStack(alignment: .bottom) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            AtlasSectionLabel(index: "04", title: "INSPECTIONS")
+                            Text("Inspecciones").font(AtlasType.display(.largeTitle, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                        }
+                        Spacer()
+                        Button("Nueva") { open(.newInspection) }.font(AtlasType.body(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.blue)
+                    }
 
-                    segmentPicker
-
-                    VStack(spacing: 0) {
-                        ForEach(AtlasSampleData.inspections) { inspection in
-                            InspectionRow(inspection: inspection) { open(.inspectionResult) }
+                    if store.inspections.isEmpty {
+                        AtlasEmptyState(title: "Sin inspecciones", detail: "Crea una inspección guiada para verificar el estado de un activo.", symbol: "checklist")
+                    } else {
+                        ForEach(store.inspections) { inspection in
+                            InspectionRow(inspection: inspection.presentation(assetName: assetName(inspection.assetId))) {
+                                Task { await store.selectInspection(inspection.id); open(.inspectionResult) }
+                            }
                             AtlasDivider()
                         }
                     }
@@ -32,216 +33,130 @@ struct InspectionsScreen: View {
         }
     }
 
-    private var segmentPicker: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(["Todas", "Programadas", "En progreso", "Completadas", "Archivadas"], id: \.self) { item in
-                    Button {
-                        guard segment != item else { return }
-                        AtlasHaptics.selection()
-                        withAnimation(AtlasMotion.fastAnimation) { segment = item }
-                    } label: {
-                        Text(item)
-                            .font(AtlasType.body(.caption, weight: .semibold))
-                            .foregroundStyle(segment == item ? .white : AtlasColor.inkSecondary)
-                            .padding(.horizontal, 12)
-                            .frame(height: 36)
-                            .background(segment == item ? AtlasColor.blue : AtlasColor.surfaceSecondary)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(AtlasCompactPressButtonStyle())
-                }
-            }
-        }
-    }
+    private func assetName(_ id: String) -> String { store.assets.first(where: { $0.id == id })?.name ?? "Activo" }
 }
 
 struct NewInspectionScreen: View {
     let open: (AtlasRoute) -> Void
-    @Environment(\.dismiss) private var dismiss
-    @State private var currentStep = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    private let steps = [
-        ("01", "VISUAL", "Captura la condición exterior.", "camera.viewfinder"),
-        ("02", "COMPONENTES", "Verifica los componentes relevantes.", "square.grid.2x2"),
-        ("03", "EVIDENCIA", "Añade evidencia cuando sea necesaria.", "photo.on.rectangle"),
-        ("04", "REVISIÓN", "ATLAS organiza hallazgos y contexto.", "sparkles")
-    ]
+    @EnvironmentObject private var store: AtlasAppStore
+    @State private var selectedAssetID = ""
+    @State private var title = "Inspección visual"
+    @State private var scheduled = Date()
+    @State private var scheduling = false
 
     var body: some View {
         AtlasPage {
-            VStack(spacing: 0) {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 26) {
-                        AtlasEditorialHeader(
-                            eyebrow: "NEW INSPECTION",
-                            title: "Una inspección, en pequeños pasos.",
-                            subtitle: "Unidad de enfriamiento M-028",
-                            backAction: { dismiss() }
-                        )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    AtlasBackHeader(title: "Nueva inspección", eyebrow: "INSPECTION / GUIDED")
+                    Text("ATLAS crea el flujo de inspección y lo asocia al activo seleccionado.")
+                        .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
-                        VStack(spacing: 0) {
-                            ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                                HStack(alignment: .top, spacing: 16) {
-                                    VStack(spacing: 7) {
-                                        Circle()
-                                            .fill(index <= currentStep ? AtlasColor.blue : AtlasColor.lineStrong)
-                                            .frame(width: 9, height: 9)
-                                        if index < steps.count - 1 {
-                                            Rectangle()
-                                                .fill(AtlasColor.line)
-                                                .frame(width: 1, height: 64)
-                                        }
-                                    }
-                                    .padding(.top, 7)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("ACTIVO").font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.inkMuted)
+                        Picker("Activo", selection: $selectedAssetID) {
+                            Text("Selecciona un activo").tag("")
+                            ForEach(store.assets) { asset in Text(asset.name).tag(asset.id) }
+                        }.pickerStyle(.menu)
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("TÍTULO").font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.inkMuted)
+                        TextField("Inspección visual", text: $title).frame(height: 46)
+                            .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.lineStrong).frame(height: 1) }
+                    }
+                    Toggle("Programar fecha", isOn: $scheduling)
+                    if scheduling { DatePicker("Fecha", selection: $scheduled, displayedComponents: [.date, .hourAndMinute]) }
 
-                                    VStack(alignment: .leading, spacing: 5) {
-                                        Text("\(step.0) / \(step.1)")
-                                            .font(AtlasType.label(.caption2, weight: .semibold))
-                                            .tracking(0.8)
-                                            .foregroundStyle(index <= currentStep ? AtlasColor.blue : AtlasColor.inkMuted)
-                                        Text(step.2)
-                                            .font(AtlasType.heading(.headline, weight: .semibold))
-                                            .foregroundStyle(AtlasColor.ink)
-                                        if index == currentStep {
-                                            Text(stepDetail(index))
-                                                .font(AtlasType.body(.caption))
-                                                .foregroundStyle(AtlasColor.inkSecondary)
-                                                .lineSpacing(3)
-                                                .padding(.top, 3)
-                                                .transition(.opacity.combined(with: .move(edge: .top)))
-                                        }
-                                    }
-                                    Spacer()
-                                    Image(systemName: step.3)
-                                        .foregroundStyle(index <= currentStep ? AtlasColor.blue : AtlasColor.inkMuted)
-                                }
-                                .padding(.vertical, 7)
+                    VStack(alignment: .leading, spacing: 10) {
+                        AtlasSectionLabel(index: "01", title: "VISUAL")
+                        Text("Captura condición exterior y evidencia relevante.").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                        AtlasSectionLabel(index: "02", title: "COMPONENTS")
+                        Text("Verifica los componentes clave del activo.").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                        AtlasSectionLabel(index: "03", title: "EVIDENCE")
+                        Text("Añade evidencia adicional cuando sea necesario.").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                        AtlasSectionLabel(index: "04", title: "REVIEW")
+                        Text("ATLAS consolida findings, anomalías y resultado.").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                    }
+
+                    AtlasPrimaryButton(title: "Crear inspección", symbol: "checklist") {
+                        Task {
+                            if let inspection = await store.createInspection(assetId: selectedAssetID, title: title, scheduledFor: scheduling ? scheduled : nil) {
+                                await store.selectInspection(inspection.id)
+                                open(.inspectionResult)
                             }
                         }
-                        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: currentStep)
                     }
-                    .padding(20)
+                    .disabled(selectedAssetID.isEmpty || title.isEmpty)
                 }
-
-                VStack(spacing: 10) {
-                    AtlasPrimaryButton(
-                        title: currentStep == steps.count - 1 ? "Finalizar inspección" : "Completar paso",
-                        symbol: currentStep == steps.count - 1 ? "checkmark" : "arrow.right"
-                    ) {
-                        if currentStep == steps.count - 1 {
-                            AtlasHaptics.success()
-                            open(.inspectionResult)
-                        } else {
-                            AtlasHaptics.selection()
-                            if reduceMotion { currentStep += 1 }
-                            else { withAnimation(AtlasMotion.standardAnimation) { currentStep += 1 } }
-                        }
-                    }
-                    if currentStep > 0 {
-                        Button("Paso anterior") {
-                            AtlasHaptics.selection()
-                            if reduceMotion { currentStep -= 1 }
-                            else { withAnimation(AtlasMotion.standardAnimation) { currentStep -= 1 } }
-                        }
-                            .font(AtlasType.body(.subheadline, weight: .semibold))
-                            .foregroundStyle(AtlasColor.inkSecondary)
-                    }
-                }
-                .padding(16)
-                .background(.ultraThinMaterial)
-                .overlay(alignment: .top) { AtlasDivider() }
+                .padding(20)
             }
         }
-    }
-
-    private func stepDetail(_ index: Int) -> String {
-        switch index {
-        case 0: return "Registra la vista general y cualquier condición visible que deba quedar documentada."
-        case 1: return "Confirma ventilador, montaje, panel frontal y componentes definidos para este activo."
-        case 2: return "Fotografías, notas o lecturas adicionales solo cuando aporten contexto."
-        default: return "ATLAS resume hallazgos, cambios, evidencia y recomendaciones antes de cerrar."
-        }
+        .onAppear { if selectedAssetID.isEmpty { selectedAssetID = store.selectedAssetID ?? store.assets.first?.id ?? "" } }
     }
 }
 
 struct InspectionResultScreen: View {
     let open: (AtlasRoute) -> Void
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 26) {
-                    AtlasEditorialHeader(
-                        eyebrow: "INSPECTION / RESULT",
-                        title: "Condición verificada.",
-                        subtitle: "Unidad M-028 · 20 sep 2026 · 15:42",
-                        backAction: { dismiss() }
-                    )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    AtlasBackHeader(title: "Inspección", eyebrow: "INSPECTION / RESULT")
+                    if let result = store.selectedInspection {
+                        HStack { Text(result.inspection.status.uppercased()).font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.blue); Spacer(); Text(result.inspection.updatedAt.atlasRelative).font(AtlasType.mono(.caption2)).foregroundStyle(AtlasColor.inkMuted) }
+                        Text(result.inspection.title).font(AtlasType.display(.title, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                        Text(result.inspection.summary.ifEmpty("Inspection workflow connected to ATLAS API."))
+                            .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
-                    HStack(spacing: 10) {
-                        StatusBadge(health: .verified)
-                        Text("CONFIANZA 93%")
-                            .font(AtlasType.mono(.caption2, weight: .semibold))
-                            .foregroundStyle(AtlasColor.inkMuted)
-                    }
+                        HStack(spacing: 8) {
+                            Metric(value: String(result.findings.count), label: "Findings")
+                            Metric(value: String(result.anomaliesCount), label: "Anomalías")
+                            Metric(value: String(result.evidenceCount), label: "Evidencias")
+                        }
 
-                    resultSection("01", "FINDINGS", rows: [
-                        ("01", "Ligera variación en montaje", "Seguimiento"),
-                        ("02", "Panel frontal", "Sin cambios"),
-                        ("03", "Ventilador", "Verificado")
-                    ])
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        AtlasSectionLabel(index: "02", title: "EVIDENCE", trailing: "7 piezas")
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        AtlasSectionLabel(index: "01", title: "STEPS")
+                        ForEach(result.steps) { step in
                             HStack(spacing: 12) {
-                                ForEach(AtlasSampleData.evidence) { EvidenceCard(evidence: $0) }
+                                Image(systemName: step.status.lowercased() == "completed" ? "checkmark.circle.fill" : "circle")
+                                    .foregroundStyle(step.status.lowercased() == "completed" ? AtlasColor.healthy : AtlasColor.lineStrong)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(step.stepKey.uppercased()).font(AtlasType.heading(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                                    if !step.notes.isEmpty { Text(step.notes).font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted) }
+                                }
+                                Spacer()
+                                if step.status.lowercased() != "completed" {
+                                    Button("Completar") { Task { await store.completeInspectionStep(stepKey: step.stepKey) } }
+                                        .font(AtlasType.body(.caption, weight: .semibold)).foregroundStyle(AtlasColor.blue)
+                                }
+                            }
+                            .padding(.vertical, 8)
+                        }
+
+                        AtlasSectionLabel(index: "02", title: "FINDINGS")
+                        if result.findings.isEmpty {
+                            Text("Sin hallazgos registrados.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkMuted)
+                        } else {
+                            ForEach(result.findings) { finding in
+                                AlertRow(level: finding.severity, title: finding.title, detail: finding.description, color: finding.severity.atlasHealth.color) { }
                             }
                         }
-                    }
 
-                    AIInsight(
-                        title: "No se observa degradación significativa.",
-                        text: "La variación en el sistema de montaje es pequeña, pero aparece en dos inspecciones consecutivas. Conviene mantenerla bajo observación.",
-                        confidence: "91%"
-                    )
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        AtlasSectionLabel(index: "03", title: "RECOMMENDATIONS")
-                        PrimaryActionRow(title: "Inspeccionar sistema de montaje", subtitle: "Recomendado en los próximos 7 días", symbol: "wrench.adjustable") { open(.createWorkOrder) }
-                        AtlasDivider()
-                        PrimaryActionRow(title: "Comparar con inspección anterior", subtitle: "18 sep → 20 sep", symbol: "rectangle.split.2x1") { open(.compare) }
+                        AtlasPrimaryButton(title: "Crear orden de trabajo", symbol: "wrench.and.screwdriver") {
+                            guard let asset = store.assets.first(where: { $0.id == result.inspection.assetId }) else { return }
+                            Task {
+                                if let order = await store.createWorkOrder(assetId: asset.id, title: "Acción de inspección: \(result.inspection.title)", description: result.inspection.summary, priority: "medium") {
+                                    await store.selectWorkOrder(order.id)
+                                    open(.workOrderDetail)
+                                }
+                            }
+                        }
+                    } else {
+                        AtlasLoadingState(title: "Cargando inspección…", detail: "Recuperando pasos, hallazgos y evidencia.")
                     }
                 }
                 .padding(20)
-            }
-        }
-    }
-
-    private func resultSection(_ index: String, _ title: String, rows: [(String, String, String)]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            AtlasSectionLabel(index: index, title: title)
-            ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
-                HStack(alignment: .top, spacing: 12) {
-                    Text(row.0)
-                        .font(AtlasType.mono(.caption2, weight: .semibold))
-                        .foregroundStyle(AtlasColor.blue)
-                        .frame(width: 24)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(row.1)
-                            .font(AtlasType.body(.body, weight: .semibold))
-                            .foregroundStyle(AtlasColor.ink)
-                        Text(row.2)
-                            .font(AtlasType.body(.caption))
-                            .foregroundStyle(AtlasColor.inkMuted)
-                    }
-                    Spacer()
-                }
-                .padding(.vertical, 11)
-                if idx < rows.count - 1 { AtlasDivider() }
             }
         }
     }

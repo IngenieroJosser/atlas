@@ -2,9 +2,9 @@ import SwiftUI
 
 struct AtlasRootView: View {
     @AppStorage("atlas.didOnboard") private var didOnboard = false
-    @AppStorage("atlas.authenticated") private var authenticated = false
     @State private var splashFinished = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         Group {
@@ -15,21 +15,28 @@ struct AtlasRootView: View {
                 OnboardingScreen {
                     didOnboard = true
                 }
-            } else if !authenticated {
-                LoginScreen(
-                    continueAction: { authenticated = true },
-                    createAction: { authenticated = true }
-                )
             } else {
-                ContentView()
+                switch store.sessionState {
+                case .restoring:
+                    AtlasPage {
+                        AtlasLoadingState(title: "Recuperando sesión…", detail: "Validando tu sesión segura con ATLAS API.")
+                    }
+                case .signedOut:
+                    LoginScreen()
+                case .signedIn:
+                    ContentView()
+                }
             }
         }
         .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: splashFinished)
         .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: didOnboard)
-        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: authenticated)
+        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: store.sessionState)
         .task {
             try? await Task.sleep(for: .milliseconds(900))
             splashFinished = true
+            if store.sessionState == .restoring {
+                await store.restoreSession()
+            }
         }
     }
 }

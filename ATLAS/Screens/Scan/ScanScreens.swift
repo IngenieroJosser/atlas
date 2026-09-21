@@ -8,6 +8,8 @@ struct ScanFlowView: View {
     @State private var mode: ScanMode = .auto
     @State private var capturedImage: UIImage?
     @State private var visionResult = AtlasVisionResult(recognizedText: [], textConfidence: 0)
+    @State private var captureSession: APICapture?
+    @EnvironmentObject private var store: AtlasAppStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -27,8 +29,9 @@ struct ScanFlowView: View {
                     move(to: .processing)
                 }
             case .processing:
-                ScanProcessingScreen(image: capturedImage) { result in
+                ScanProcessingScreen(mode: mode, image: capturedImage, store: store) { result, capture in
                     visionResult = result
+                    captureSession = capture
                     move(to: .result)
                 }
             case .result:
@@ -36,6 +39,7 @@ struct ScanFlowView: View {
                     mode: mode,
                     image: capturedImage,
                     visionResult: visionResult,
+                    captureSession: captureSession,
                     close: { dismiss() },
                     captureAgain: { move(to: .capture) }
                 )
@@ -466,11 +470,14 @@ private struct CameraCornerShape: Shape {
 }
 
 private struct ScanProcessingScreen: View {
+    let mode: ScanMode
     let image: UIImage?
-    let completed: (AtlasVisionResult) -> Void
+    let store: AtlasAppStore
+    let completed: (AtlasVisionResult, APICapture?) -> Void
     @State private var progress = 0
+    @State private var failure: String?
 
-    private let steps = ["Evidencia visual", "Geometría disponible", "Texto / OCR", "Condición", "Estado anterior", "Análisis ATLAS"]
+    private let steps = ["Evidencia visual", "Registro de captura", "Texto / OCR", "Upload evidence", "Análisis ATLAS", "Preparar world state"]
 
     var body: some View {
         AtlasPage {
@@ -478,55 +485,71 @@ private struct ScanProcessingScreen: View {
                 Spacer()
                 AtlasSectionLabel(index: "AI", title: "ANALYSING WORLD STATE")
                 Text("ATLAS está construyendo un estado trazable.")
-                    .font(AtlasType.display(.largeTitle, weight: .semibold))
-                    .tracking(-1)
-                    .foregroundStyle(AtlasColor.ink)
-                Text("Cada etapa corresponde a una fuente real disponible en el dispositivo o al contexto ya registrado.")
-                    .font(AtlasType.body(.body))
-                    .foregroundStyle(AtlasColor.inkSecondary)
-                    .lineSpacing(4)
+                    .font(AtlasType.display(.largeTitle, weight: .semibold)).tracking(-1).foregroundStyle(AtlasColor.ink)
+                Text("La captura se procesa localmente con Vision y se registra en el backend con su evidencia original.")
+                    .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary).lineSpacing(4)
 
                 VStack(spacing: 0) {
                     ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                         HStack(spacing: 14) {
                             Group {
-                                if index < progress {
-                                    AtlasAnimatedCheckmark(color: AtlasColor.healthy, size: 19)
-                                } else if index == progress {
-                                    AtlasProcessingIndicator(color: AtlasColor.blue, size: 18)
-                                } else {
-                                    Image(systemName: "circle")
-                                        .foregroundStyle(AtlasColor.lineStrong)
-                                }
-                            }
-                            .frame(width: 24)
-                            Text(step)
-                                .font(AtlasType.body(.body, weight: index == progress ? .semibold : .regular))
-                                .foregroundStyle(index <= progress ? AtlasColor.ink : AtlasColor.inkMuted)
+                                if index < progress { AtlasAnimatedCheckmark(color: AtlasColor.healthy, size: 19) }
+                                else if index == progress { AtlasProcessingIndicator(color: AtlasColor.blue, size: 18) }
+                                else { Image(systemName: "circle").foregroundStyle(AtlasColor.lineStrong) }
+                            }.frame(width: 24)
+                            Text(step).font(AtlasType.body(.body, weight: index == progress ? .semibold : .regular)).foregroundStyle(index <= progress ? AtlasColor.ink : AtlasColor.inkMuted)
                             Spacer()
-                        }
-                        .padding(.vertical, 13)
+                        }.padding(.vertical, 13)
                         if index < steps.count - 1 { AtlasDivider() }
                     }
+                }
+                if let failure {
+                    Text(failure).font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.critical)
                 }
                 Spacer()
             }
             .padding(22)
-            .task {
-                for index in 0..<steps.count {
-                    withAnimation(AtlasMotion.fastAnimation) { progress = index }
-                    AtlasHaptics.selection()
-                    try? await Task.sleep(for: .milliseconds(260))
-                }
-                let result = image.map { image in
-                    Task { await AtlasVisionAnalyzer.analyze(image: image) }
-                }
-                if let result {
-                    completed(await result.value)
-                } else {
-                    completed(AtlasVisionResult(recognizedText: [], textConfidence: 0))
-                }
-            }
+            .task { await runPipeline() }
+        }
+    }
+
+    private func runPipeline() async {
+        guard let image else {
+            completed(.init(recognizedText: [], textConfidence: 0), nil)
+            return
+        }
+        do {
+            progress = 0
+            let vision = await AtlasVisionAnalyzer.analyze(image: image)
+            withAnimation(AtlasMotion.fastAnimation) { progress = 1 }
+            let capture = try await store.createCapture(mode: mode)
+            withAnimation(AtlasMotion.fastAnimation) { progress = 2 }
+            AtlasHaptics.selection()
+            withAnimation(AtlasMotion.fastAnimation) { progress = 3 }
+            _ = try await store.uploadCaptureEvidence(captureId: capture.id, image: image)
+            withAnimation(AtlasMotion.fastAnimation) { progress = 4 }
+            _ = try await store.analyzeCapture(captureId: capture.id, mode: mode, vision: vision, suggestedName: suggestedName)
+            withAnimation(AtlasMotion.fastAnimation) { progress = 5 }
+            try? await Task.sleep(for: .milliseconds(220))
+            completed(vision, capture)
+        } catch {
+            failure = error.localizedDescription
+            AtlasHaptics.warning()
+            try? await Task.sleep(for: .milliseconds(650))
+            let vision = await AtlasVisionAnalyzer.analyze(image: image)
+            completed(vision, nil)
+        }
+    }
+
+    private var suggestedName: String {
+        switch mode {
+        case .property: "Espacio capturado"
+        case .vehicle: "Vehículo detectado"
+        case .equipment: "Equipo detectado"
+        case .infrastructure: "Infraestructura detectada"
+        case .document: "Documento capturado"
+        case .other: "Nuevo activo"
+        case .auto: "Activo por confirmar"
         }
     }
 }
@@ -535,134 +558,137 @@ private struct ScanResultScreen: View {
     let mode: ScanMode
     let image: UIImage?
     let visionResult: AtlasVisionResult
+    let captureSession: APICapture?
     let close: () -> Void
     let captureAgain: () -> Void
 
-    @State private var created = false
+    @EnvironmentObject private var store: AtlasAppStore
+    @State private var name = ""
+    @State private var selectedAssetID = ""
+    @State private var committed: APICaptureCommitResult?
+    @State private var saving = false
+    @State private var error: String?
 
     var body: some View {
         AtlasPage {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     HStack {
-                        Button(action: close) {
-                            Image(systemName: "xmark")
-                                .foregroundStyle(AtlasColor.ink)
-                                .frame(width: 44, height: 44)
-                        }
+                        Button(action: close) { Image(systemName: "xmark").foregroundStyle(AtlasColor.ink).frame(width: 44, height: 44) }
                         Spacer()
-                        Text("RESULTADO")
-                            .font(AtlasType.label(.caption2, weight: .semibold))
-                            .tracking(1)
-                            .foregroundStyle(AtlasColor.inkMuted)
+                        Text(captureSession == nil ? "RESULTADO LOCAL" : "RESULTADO / API")
+                            .font(AtlasType.label(.caption2, weight: .semibold)).tracking(1).foregroundStyle(AtlasColor.inkMuted)
                     }
 
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("ASSET DETECTED")
-                            .font(AtlasType.label(.caption2, weight: .semibold))
-                            .tracking(1)
-                            .foregroundStyle(AtlasColor.blue)
-                        Text(suggestedName)
-                            .font(AtlasType.display(.largeTitle, weight: .semibold))
-                            .tracking(-1)
-                            .foregroundStyle(AtlasColor.ink)
+                        Text("ASSET DETECTED").font(AtlasType.label(.caption2, weight: .semibold)).tracking(1).foregroundStyle(AtlasColor.blue)
+                        Text(committed?.asset.name ?? suggestedName)
+                            .font(AtlasType.display(.largeTitle, weight: .semibold)).tracking(-1).foregroundStyle(AtlasColor.ink)
                         HStack(spacing: 10) {
                             StatusBadge(health: .stable)
-                            Text("CONFIANZA 91%")
-                                .font(AtlasType.mono(.caption2, weight: .semibold))
-                                .foregroundStyle(AtlasColor.inkMuted)
+                            Text("CONFIANZA \(Int(max(visionResult.textConfidence, 0.72) * 100))%")
+                                .font(AtlasType.mono(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.inkMuted)
                         }
                     }
 
                     if let image {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 230)
-                            .frame(maxWidth: .infinity)
-                            .clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        Image(uiImage: image).resizable().scaledToFill().frame(height: 230).frame(maxWidth: .infinity).clipped().clipShape(RoundedRectangle(cornerRadius: 16))
                     }
 
-                    VStack(alignment: .leading, spacing: 14) {
-                        AtlasSectionLabel(index: "01", title: "RECONOCIDO")
-                        row("Tipo", mode == .auto ? "Activo / por confirmar" : mode.rawValue)
-                        row("Estado", "Estable")
-                        row("Evidencia", "1 captura")
-                        row("Capacidad espacial", AtlasDeviceCapabilities.lidarSceneReconstructionSupported ? "LiDAR disponible" : "Captura visual")
+                    if committed == nil {
+                        VStack(alignment: .leading, spacing: 10) {
+                            AtlasSectionLabel(index: "01", title: "CREATE / ATTACH")
+                            TextField("Nombre del activo", text: $name)
+                                .font(AtlasType.body(.body)).frame(height: 48)
+                                .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.lineStrong).frame(height: 1) }
+                            Picker("Activo existente", selection: $selectedAssetID) {
+                                Text("Selecciona para adjuntar").tag("")
+                                ForEach(store.assets) { Text($0.name).tag($0.id) }
+                            }.pickerStyle(.menu)
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 12) {
                         AtlasSectionLabel(index: "02", title: "TEXTO DETECTADO", trailing: visionResult.recognizedText.isEmpty ? "Sin OCR" : "Vision")
                         if visionResult.recognizedText.isEmpty {
-                            Text("No se detectó texto suficientemente legible en esta captura.")
-                                .font(AtlasType.body(.body))
-                                .foregroundStyle(AtlasColor.inkSecondary)
+                            Text("No se detectó texto suficientemente legible.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
                         } else {
-                            ForEach(visionResult.recognizedText.prefix(5), id: \.self) { text in
-                                Text(text)
-                                    .font(AtlasType.mono(.caption))
-                                    .foregroundStyle(AtlasColor.inkSecondary)
-                                    .padding(.vertical, 4)
-                            }
+                            ForEach(visionResult.recognizedText.prefix(5), id: \.self) { text in Text(text).font(AtlasType.mono(.caption)).foregroundStyle(AtlasColor.inkSecondary).padding(.vertical, 4) }
                         }
                     }
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        AtlasSectionLabel(index: "03", title: "CAMBIOS")
-                        Text("Esta captura aún no está asociada a un activo histórico. ATLAS necesita un estado anterior para calcular diferencias.")
-                            .font(AtlasType.body(.body))
-                            .foregroundStyle(AtlasColor.inkSecondary)
-                            .lineSpacing(4)
-                    }
-
-                    if created {
-                        HStack(spacing: 10) {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(AtlasColor.healthy)
-                            Text("Activo creado y estado guardado.")
-                                .font(AtlasType.body(.body, weight: .semibold))
-                                .foregroundStyle(AtlasColor.ink)
+                    if let committed {
+                        VStack(alignment: .leading, spacing: 12) {
+                            AtlasSectionLabel(index: "03", title: "WORLD STATE SAVED")
+                            MetadataLabel(title: "Activo", value: committed.asset.name)
+                            MetadataLabel(title: "Estado #", value: String(committed.worldState.sequenceNumber))
+                            MetadataLabel(title: "Sync", value: committed.worldState.syncStatus.uppercased())
+                            MetadataLabel(title: "Cambios", value: String(committed.detectedChanges.count))
                         }
-                        .padding(.vertical, 10)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+                        HStack(spacing: 10) { Image(systemName: "checkmark.circle.fill").foregroundStyle(AtlasColor.healthy); Text("Activo y estado sincronizados con ATLAS API.").font(AtlasType.body(.body, weight: .semibold)).foregroundStyle(AtlasColor.ink) }
+                    } else if captureSession == nil {
+                        Text("El backend no estaba disponible durante el procesamiento. Puedes capturar de nuevo o guardar la operación localmente para sincronizarla después.")
+                            .font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.warning)
                     }
 
-                    AtlasPrimaryButton(title: "Crear activo", symbol: "plus") {
-                        AtlasHaptics.success()
-                        withAnimation(AtlasMotion.softSpring) { created = true }
+                    if let error { Text(error).font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.critical) }
+
+                    if committed == nil, let captureSession {
+                        AtlasPrimaryButton(title: saving ? "Guardando…" : "Crear activo", symbol: "plus") {
+                            Task { await commitNew(captureSession.id) }
+                        }.disabled(saving)
+                        AtlasSecondaryButton(title: "Adjuntar a activo existente", symbol: "link") {
+                            Task { await attach(captureSession.id) }
+                        }.disabled(saving || selectedAssetID.isEmpty)
                     }
-                    AtlasSecondaryButton(title: "Adjuntar a activo existente", symbol: "link") {
-                        AtlasHaptics.success()
-                        withAnimation(AtlasMotion.softSpring) { created = true }
+
+                    if captureSession == nil && committed == nil {
+                        AtlasPrimaryButton(title: "Guardar para sincronizar", symbol: "internaldrive") {
+                            let localID = UUID().uuidString
+                            store.enqueueOfflineOperation(entityType: "capture", localId: localID, payload: ["capture_mode": .string(modeAPIValue), "recognized_text": .string(visionResult.recognizedText.joined(separator: "\n"))])
+                            AtlasHaptics.success()
+                        }
                     }
+
                     Button("Capturar de nuevo", action: captureAgain)
-                        .font(AtlasType.body(.body, weight: .semibold))
-                        .foregroundStyle(AtlasColor.blue)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .padding(20)
+                        .font(AtlasType.body(.body, weight: .semibold)).foregroundStyle(AtlasColor.blue).frame(maxWidth: .infinity, minHeight: 44)
+                }.padding(20)
             }
         }
+        .onAppear { if name.isEmpty { name = suggestedName } }
+    }
+
+    private func commitNew(_ captureId: String) async {
+        saving = true; defer { saving = false }
+        do {
+            committed = try await store.commitNewAsset(captureId: captureId, name: name.ifEmpty(suggestedName), mode: mode)
+            AtlasHaptics.success()
+        } catch { self.error = error.localizedDescription; AtlasHaptics.warning() }
+    }
+
+    private func attach(_ captureId: String) async {
+        saving = true; defer { saving = false }
+        do {
+            committed = try await store.commitToExistingAsset(captureId: captureId, assetId: selectedAssetID)
+            AtlasHaptics.success()
+        } catch { self.error = error.localizedDescription; AtlasHaptics.warning() }
     }
 
     private var suggestedName: String {
         switch mode {
-        case .property: return "Espacio capturado"
-        case .vehicle: return "Vehículo detectado"
-        case .equipment: return "Equipo detectado"
-        case .infrastructure: return "Infraestructura detectada"
-        case .document: return "Documento capturado"
-        case .other: return "Nuevo activo"
-        case .auto: return "Activo por confirmar"
+        case .property: "Espacio capturado"
+        case .vehicle: "Vehículo detectado"
+        case .equipment: "Equipo detectado"
+        case .infrastructure: "Infraestructura detectada"
+        case .document: "Documento capturado"
+        case .other: "Nuevo activo"
+        case .auto: "Activo por confirmar"
         }
     }
 
-    private func row(_ key: String, _ value: String) -> some View {
-        HStack {
-            Text(key).font(AtlasType.body(.subheadline)).foregroundStyle(AtlasColor.inkSecondary)
-            Spacer()
-            Text(value).font(AtlasType.body(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+    private var modeAPIValue: String {
+        switch mode {
+        case .auto: "auto"; case .property: "property"; case .vehicle: "vehicle"; case .equipment: "equipment"; case .infrastructure: "infrastructure"; case .document: "document"; case .other: "other"
         }
-        .padding(.vertical, 6)
     }
 }

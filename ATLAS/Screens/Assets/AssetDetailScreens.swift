@@ -3,404 +3,264 @@ import SwiftUI
 struct AssetDetailScreen: View {
     let open: (AtlasRoute) -> Void
     let startScan: () -> Void
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 30) {
-                    AtlasEditorialHeader(
-                        eyebrow: "ASSET / EQUIPMENT",
-                        title: "Unidad de enfriamiento M-028",
-                        subtitle: "Un activo, un historial, una lectura actual.",
-                        backAction: { dismiss() },
-                        trailingSymbol: "ellipsis",
-                        trailingAction: {}
-                    )
+                VStack(alignment: .leading, spacing: 28) {
+                    AtlasBackHeader(title: detail?.asset.name ?? "Activo", eyebrow: "ASSET / \((detail?.asset.category ?? "—").uppercased())")
 
-                    assetIdentity
-                    currentState
-
-                    AIInsight(
-                        title: "Condición estable frente al estado anterior.",
-                        text: "No se detecta degradación visual significativa. La ligera variación observada en el sistema de montaje debe seguirse en la próxima inspección.",
-                        confidence: "89%"
-                    )
-
-                    changes
-                    evidence
-                    maintenance
-                    activity
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 14)
-                .padding(.bottom, 18)
-            }
-            .safeAreaInset(edge: .bottom) {
-                assetActions
-            }
-        }
-    }
-
-    private var assetIdentity: some View {
-        VStack(spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                AtlasColor.navy
-
-                GeometryReader { proxy in
-                    Path { path in
-                        let step: CGFloat = 32
-                        var x: CGFloat = 0
-                        while x <= proxy.size.width {
-                            path.move(to: CGPoint(x: x, y: 0))
-                            path.addLine(to: CGPoint(x: x, y: proxy.size.height))
-                            x += step
+                    if let detail {
+                        hero(detail)
+                        currentState(detail)
+                        intelligence(detail)
+                        changes(detail)
+                        evidence(detail)
+                        maintenance(detail)
+                        activity(detail)
+                        actions
+                    } else if let error = store.errorMessage {
+                        AtlasErrorState(title: "No pudimos abrir el activo", detail: error) {
+                            if let id = store.selectedAssetID { Task { await store.selectAsset(id) } }
                         }
-                        var y: CGFloat = 0
-                        while y <= proxy.size.height {
-                            path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: proxy.size.width, y: y))
-                            y += step
-                        }
-                    }
-                    .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
-                }
-
-                VStack(alignment: .leading, spacing: 18) {
-                    HStack {
-                        Text("ASSET / M-028")
-                            .font(AtlasType.label(.caption2, weight: .semibold))
-                            .tracking(1.0)
-                            .foregroundStyle(Color.white.opacity(0.58))
-                        Spacer()
-                        HStack(spacing: 7) {
-                            Circle().fill(AtlasColor.healthy).frame(width: 7, height: 7)
-                            Text("ESTABLE")
-                                .font(AtlasType.label(.caption2, weight: .semibold))
-                                .tracking(0.7)
-                        }
-                        .foregroundStyle(.white)
-                    }
-
-                    Spacer()
-
-                    HStack(alignment: .bottom) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Cooling / HVAC")
-                                .font(AtlasType.body(.caption, weight: .medium))
-                                .foregroundStyle(Color.white.opacity(0.55))
-                            Text("18")
-                                .font(AtlasType.display(.largeTitle, weight: .semibold))
-                                .tracking(-1.5)
-                                .foregroundStyle(.white)
-                            Text("WORLD STATES")
-                                .font(AtlasType.label(.caption2, weight: .semibold))
-                                .tracking(0.9)
-                                .foregroundStyle(Color.white.opacity(0.58))
-                        }
-
-                        Spacer()
-
-                        ZStack {
-                            Circle()
-                                .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                                .frame(width: 112, height: 112)
-                            Circle()
-                                .stroke(AtlasColor.blue.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [4, 7]))
-                                .frame(width: 86, height: 86)
-                            Image(systemName: "fan")
-                                .font(.system(size: 48, weight: .ultraLight))
-                                .foregroundStyle(.white)
-                        }
+                    } else {
+                        AtlasLoadingState(title: "Cargando activo…", detail: "Recuperando estado, evidencia y actividad.")
                     }
                 }
                 .padding(20)
+                .padding(.bottom, 24)
             }
-            .frame(height: 252)
-
-            HStack(spacing: 0) {
-                identityMeta("M-028", "ID")
-                identityRule
-                identityMeta("PLANTA 01", "UBICACIÓN")
-                identityRule
-                identityMeta("94%", "CONFIANZA")
-            }
-            .padding(.horizontal, 16)
-            .frame(height: 78)
-            .background(AtlasColor.surface)
         }
+        .task {
+            if let id = store.selectedAssetID, store.selectedAssetDetail?.asset.id != id {
+                await store.selectAsset(id)
+            }
+        }
+    }
+
+    private var detail: APIAssetDetail? { store.selectedAssetDetail }
+
+    private func hero(_ detail: APIAssetDetail) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            AtlasColor.navy
+            VStack(alignment: .leading, spacing: 18) {
+                HStack {
+                    StatusBadge(health: detail.asset.status.atlasHealth)
+                    Spacer()
+                    Text(detail.asset.identifier.ifEmpty("NO ID"))
+                        .font(AtlasType.mono(.caption2, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.54))
+                }
+                Spacer()
+                Text(detail.asset.name)
+                    .font(AtlasType.display(.largeTitle, weight: .semibold))
+                    .tracking(-1.2)
+                    .foregroundStyle(.white)
+                Text([detail.asset.category, detail.asset.location].filter { !$0.isEmpty }.joined(separator: " / "))
+                    .font(AtlasType.label(.caption, weight: .semibold))
+                    .tracking(0.8)
+                    .foregroundStyle(Color.white.opacity(0.62))
+            }
+            .padding(20)
+        }
+        .frame(height: 240)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay { RoundedRectangle(cornerRadius: 18).stroke(AtlasColor.line) }
     }
 
-    private func identityMeta(_ value: String, _ label: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(value)
-                .font(AtlasType.heading(.subheadline, weight: .semibold))
-                .foregroundStyle(AtlasColor.ink)
-            Text(label)
-                .font(AtlasType.label(.caption2, weight: .semibold))
-                .tracking(0.75)
-                .foregroundStyle(AtlasColor.inkMuted)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var identityRule: some View {
-        Rectangle().fill(AtlasColor.line).frame(width: 1, height: 34).padding(.horizontal, 8)
-    }
-
-    private var currentState: some View {
-        VStack(alignment: .leading, spacing: 17) {
-            AtlasSectionLabel(index: "01", title: "CURRENT STATE", trailing: "Hace 18 min")
-            Text("Una lectura compacta del estado actual.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-
-            HStack(alignment: .top, spacing: 22) {
-                MetadataLabel(title: "Condición", value: "Estable")
-                MetadataLabel(title: "Confianza", value: "94%")
-                MetadataLabel(title: "Inspección", value: "Hoy")
-            }
-            AtlasDivider()
-            HStack(alignment: .top, spacing: 22) {
-                MetadataLabel(title: "Categoría", value: "HVAC")
-                MetadataLabel(title: "Ubicación", value: "Planta 01")
-                MetadataLabel(title: "Estados", value: "18")
-            }
-        }
-    }
-
-    private var changes: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            AtlasSectionLabel(index: "02", title: "CHANGES", trailing: "2 recientes")
-            Text("Qué cambió desde la última captura.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-            ForEach(AtlasSampleData.changes.prefix(2)) { change in
-                ChangeRow(change: change) { open(.changeDetail) }
-            }
-        }
-    }
-
-    private var evidence: some View {
+    private func currentState(_ detail: APIAssetDetail) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            AtlasSectionLabel(index: "03", title: "EVIDENCE", trailing: "12 piezas")
-            Text("Evidencia vinculada al estado actual.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(AtlasSampleData.evidence) { evidence in
-                        EvidenceCard(evidence: evidence)
+            AtlasSectionLabel(index: "01", title: "CURRENT STATE")
+            HStack(alignment: .top, spacing: 8) {
+                Metric(value: detail.latestState.map { String(format: "%.0f%%", $0.confidence * 100) } ?? "—", label: "Confianza")
+                Metric(value: String(detail.asset.worldStatesCount), label: "Estados")
+                Metric(value: String(detail.asset.openAnomaliesCount), label: "Anomalías")
+            }
+            MetadataLabel(title: "Condición", value: detail.latestState?.conditionLabel.atlasDisplay ?? detail.asset.status.atlasDisplay)
+            MetadataLabel(title: "Última captura", value: detail.latestState?.capturedAt.atlasFull ?? "Sin estado")
+            if let summary = detail.latestState?.summary, !summary.isEmpty {
+                Text(summary).font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
+            }
+        }
+    }
+
+    private func intelligence(_ detail: APIAssetDetail) -> some View {
+        let text = detail.latestState?.summary.ifEmpty("ATLAS conserva este activo listo para comparar contra futuros estados.") ?? "Todavía no existe un estado físico suficiente para generar una interpretación."
+        return AIInsight(title: "Lectura actual", text: text, confidence: detail.latestState.map { String(format: "%.0f%%", $0.confidence * 100) } ?? "N/A")
+    }
+
+    private func changes(_ detail: APIAssetDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AtlasSectionLabel(index: "02", title: "CHANGES", trailing: String(format: "%02d", detail.asset.changesCount))
+            if detail.recentChanges.isEmpty {
+                Text("Sin cambios recientes registrados.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkMuted)
+            } else {
+                ForEach(Array(detail.recentChanges.prefix(4).enumerated()), id: \.offset) { _, item in
+                    let title = item["title"]?.stringValue ?? "Cambio detectado"
+                    let description = item["description"]?.stringValue ?? ""
+                    PrimaryActionRow(title: title, subtitle: description, symbol: "clock.arrow.circlepath") { Task { await store.loadComparison(); open(.compare) } }
+                }
+            }
+        }
+    }
+
+    private func evidence(_ detail: APIAssetDetail) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            AtlasSectionLabel(index: "03", title: "EVIDENCE", trailing: String(format: "%02d", detail.recentEvidence.count))
+            if detail.recentEvidence.isEmpty {
+                Text("No hay evidencia asociada todavía.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkMuted)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) { ForEach(detail.recentEvidence) { EvidenceCard(evidence: $0.presentation) } }
+                }
+            }
+        }
+    }
+
+    private func maintenance(_ detail: APIAssetDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AtlasSectionLabel(index: "04", title: "MAINTENANCE", trailing: String(format: "%02d", detail.asset.pendingMaintenanceCount))
+            if detail.maintenance.isEmpty {
+                Text("Sin tareas pendientes para este activo.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkMuted)
+            } else {
+                ForEach(Array(detail.maintenance.prefix(3).enumerated()), id: \.offset) { _, item in
+                    PrimaryActionRow(title: item["title"]?.stringValue ?? "Mantenimiento", subtitle: item["status"]?.stringValue?.atlasDisplay ?? "Pendiente", symbol: "wrench.and.screwdriver") { open(.maintenance) }
+                }
+            }
+        }
+    }
+
+    private func activity(_ detail: APIAssetDetail) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AtlasSectionLabel(index: "05", title: "ACTIVITY")
+            if detail.activity.isEmpty {
+                Text("Sin actividad registrada.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkMuted)
+            } else {
+                ForEach(detail.activity.prefix(5)) { item in
+                    HStack(alignment: .top, spacing: 12) {
+                        Circle().fill(AtlasColor.blue).frame(width: 7, height: 7).padding(.top, 6)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(item.title).font(AtlasType.heading(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                            Text("\(item.detail) · \(item.occurredAt.atlasRelative)").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                        }
                     }
                 }
             }
         }
     }
 
-    private var maintenance: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            AtlasSectionLabel(index: "04", title: "MAINTENANCE", trailing: "Próximo · 21 sep")
-            Text("Acciones operativas conectadas al activo.")
-                .font(AtlasType.heading(.title2, weight: .semibold))
-                .tracking(-0.55)
-                .foregroundStyle(AtlasColor.ink)
-                .padding(.bottom, 4)
-            PrimaryActionRow(title: "Revisión preventiva", subtitle: "Prioridad media · Equipo técnico", symbol: "wrench.and.screwdriver") {
-                open(.maintenanceDetail)
+    private var actions: some View {
+        VStack(spacing: 8) {
+            AtlasPrimaryButton(title: "Scan again", symbol: "viewfinder", action: startScan)
+            PrimaryActionRow(title: "Digital Twin", subtitle: "Representación y geometría disponible", symbol: "cube.transparent") {
+                Task { await store.loadDigitalTwin(); open(.digitalTwin) }
             }
-            AtlasDivider()
-            PrimaryActionRow(title: "Órdenes de trabajo", subtitle: "1 abierta · WO-2048", symbol: "doc.text") {
-                open(.workOrders)
+            PrimaryActionRow(title: "Inspect", subtitle: "Crear una inspección guiada", symbol: "checklist") { open(.newInspection) }
+            PrimaryActionRow(title: "Compare", subtitle: "Comparar estados históricos", symbol: "rectangle.split.2x1") {
+                Task { await store.loadComparison(); open(.compare) }
             }
+            PrimaryActionRow(title: "Ask ATLAS", subtitle: "Consultar con contexto de este activo", symbol: "sparkles") { open(.askAtlas) }
         }
-    }
-
-    private var activity: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            AtlasSectionLabel(index: "05", title: "ACTIVITY", trailing: "Últimos 7 días")
-            Timeline(items: [
-                ("20 SEP", "Estado 018 capturado", "Nueva evidencia y geometría asociadas."),
-                ("19 SEP", "Inspección visual completada", "Sin anomalías críticas."),
-                ("18 SEP", "Seguimiento creado", "Revisar sistema de montaje en próxima inspección.")
-            ])
-        }
-    }
-
-    private var assetActions: some View {
-        HStack(spacing: 0) {
-            compactAction("Escanear", "viewfinder", startScan)
-            compactAction("Inspeccionar", "checklist", { open(.newInspection) })
-            compactAction("Comparar", "rectangle.split.2x1", { open(.compare) })
-            compactAction("ATLAS", "sparkles", { open(.askAtlas) })
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .background(AtlasColor.surface.opacity(0.98))
-        .overlay(alignment: .top) { AtlasDivider() }
-    }
-
-    private func compactAction(_ title: String, _ symbol: String, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 5) {
-                Image(systemName: symbol).font(.system(size: 16, weight: .semibold))
-                Text(title).font(AtlasType.label(.caption2, weight: .semibold))
-            }
-            .foregroundStyle(AtlasColor.ink)
-            .frame(maxWidth: .infinity, minHeight: 48)
-        }
-        .buttonStyle(AtlasPressButtonStyle())
     }
 }
 
 struct CreateAssetScreen: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AtlasAppStore
     @State private var name = ""
-    @State private var category = "Equipo"
+    @State private var category = "equipment"
     @State private var location = ""
     @State private var identifier = ""
+    @State private var description = ""
     @State private var notes = ""
+    @State private var tags = ""
+    @State private var saving = false
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    AtlasEditorialHeader(
-                        eyebrow: "NEW ASSET",
-                        title: "Crea un activo sin convertirlo en un formulario eterno.",
-                        subtitle: "Completa lo esencial. Puedes enriquecer el activo después.",
-                        backAction: { dismiss() }
-                    )
-
-                    simpleField("NOMBRE", placeholder: "Unidad de enfriamiento M-028", text: $name)
-                    simpleField("CATEGORÍA", placeholder: "Equipo", text: $category)
-                    simpleField("UBICACIÓN", placeholder: "Planta 01", text: $location)
-                    simpleField("IDENTIFICADOR", placeholder: "M-028", text: $identifier)
-
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    AtlasBackHeader(title: "Crear activo", eyebrow: "ASSET / NEW")
+                    Text("Solo los datos necesarios. Podrás enriquecer el activo con sus estados y evidencia.")
+                        .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
+                    field("NOMBRE", $name)
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("NOTAS")
-                            .font(AtlasType.label(.caption2, weight: .semibold))
-                            .tracking(0.8)
-                            .foregroundStyle(AtlasColor.inkMuted)
-                        TextEditor(text: $notes)
-                            .font(AtlasType.body(.body))
-                            .frame(minHeight: 110)
-                            .padding(10)
-                            .scrollContentBackground(.hidden)
-                            .background(AtlasColor.surface)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay { RoundedRectangle(cornerRadius: 12).stroke(AtlasColor.line) }
+                        Text("CATEGORÍA").font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.inkMuted)
+                        Picker("Categoría", selection: $category) {
+                            ForEach(["property", "vehicle", "equipment", "infrastructure", "document", "other"], id: \.self) { Text($0.atlasDisplay).tag($0) }
+                        }.pickerStyle(.menu)
                     }
-
-                    AtlasPrimaryButton(title: "Guardar activo", symbol: "checkmark") { dismiss() }
+                    field("UBICACIÓN", $location)
+                    field("IDENTIFICADOR", $identifier)
+                    field("DESCRIPCIÓN", $description)
+                    field("TAGS · SEPARADOS POR COMAS", $tags)
+                    field("NOTAS", $notes)
+                    AtlasPrimaryButton(title: saving ? "Guardando…" : "Guardar activo", symbol: "checkmark") {
+                        Task {
+                            saving = true
+                            let created = await store.createAsset(name: name, category: category, location: location, description: description, identifier: identifier, tags: tags.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }, notes: notes)
+                            saving = false
+                            if created != nil { dismiss() }
+                        }
+                    }
+                    .disabled(saving || name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
                 .padding(20)
             }
         }
     }
 
-    private func simpleField(_ label: String, placeholder: String, text: Binding<String>) -> some View {
+    private func field(_ label: String, _ text: Binding<String>) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(AtlasType.label(.caption2, weight: .semibold))
-                .tracking(0.8)
-                .foregroundStyle(AtlasColor.inkMuted)
-            TextField(placeholder, text: text)
-                .font(AtlasType.body(.body))
-                .padding(.horizontal, 14)
-                .frame(height: 50)
-                .background(AtlasColor.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay { RoundedRectangle(cornerRadius: 12).stroke(AtlasColor.line) }
+            Text(label).font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.inkMuted)
+            TextField(label, text: text, axis: label == "DESCRIPCIÓN" || label == "NOTAS" ? .vertical : .horizontal)
+                .font(AtlasType.body(.body)).frame(minHeight: 46)
+                .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.lineStrong).frame(height: 1) }
         }
     }
 }
 
 struct DigitalTwinScreen: View {
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 26) {
-                    AtlasEditorialHeader(
-                        eyebrow: "DIGITAL TWIN",
-                        title: "Representación útil, no 3D decorativo.",
-                        subtitle: "ATLAS utiliza la información espacial disponible y degrada de forma segura cuando el dispositivo no dispone de LiDAR.",
-                        backAction: { dismiss() }
-                    )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    AtlasBackHeader(title: "Digital Twin", eyebrow: "ASSET / REPRESENTATION")
+                    if let twin = store.selectedDigitalTwin {
+                        ZStack {
+                            AtlasColor.navy
+                            VStack(spacing: 18) {
+                                Image(systemName: twin.geometryAvailable ? "cube.transparent" : "photo.on.rectangle")
+                                    .font(.system(size: 74, weight: .ultraLight)).foregroundStyle(.white)
+                                Text(twin.representation.uppercased())
+                                    .font(AtlasType.label(.caption, weight: .semibold)).tracking(1).foregroundStyle(Color.white.opacity(0.6))
+                            }
+                        }
+                        .frame(height: 270).clipShape(RoundedRectangle(cornerRadius: 18))
 
-                    twinCanvas
+                        AtlasSectionLabel(index: "01", title: "GEOMETRY")
+                        MetadataLabel(title: "Disponible", value: twin.geometryAvailable ? "Sí" : "No")
+                        MetadataLabel(title: "Evidencia", value: String(twin.evidenceCount))
+                        MetadataLabel(title: "Componentes", value: String(twin.components.count))
 
-                    capabilityRow
-
-                    detailSection("01", "GEOMETRY", rows: [("Dimensiones", "84 × 62 × 48 cm"), ("Volumen estimado", "0,25 m³"), ("Captura", "Estado 018")])
-                    detailSection("02", "PROPERTIES", rows: [("Fabricante", "ATX Systems"), ("Modelo", "XR-42"), ("Serial", "M028-62291")])
-                    detailSection("03", "COMPONENTS", rows: [("Ventilador", "Verificado"), ("Montaje", "Seguimiento"), ("Panel frontal", "Verificado")])
-                    detailSection("04", "MEASUREMENTS", rows: [("Ancho", "84,0 cm"), ("Alto", "62,1 cm"), ("Profundidad", "48,2 cm")])
+                        AtlasSectionLabel(index: "02", title: "STATE")
+                        if let state = twin.latestState {
+                            MetadataLabel(title: "Estado", value: state.conditionLabel.atlasDisplay)
+                            MetadataLabel(title: "Confianza", value: String(format: "%.0f%%", state.confidence * 100))
+                            MetadataLabel(title: "Capturado", value: state.capturedAt.atlasFull)
+                            if !state.measurementsJson.isEmpty { MetadataLabel(title: "Mediciones", value: "\(state.measurementsJson.count) registradas") }
+                        } else {
+                            Text("No existe un estado espacial todavía.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkMuted)
+                        }
+                    } else {
+                        AtlasLoadingState(title: "Construyendo vista…", detail: "Recuperando geometría y propiedades disponibles.")
+                    }
                 }
                 .padding(20)
             }
         }
-    }
-
-    private var twinCanvas: some View {
-        ZStack {
-            AtlasColor.surfaceSecondary
-            VStack(spacing: 18) {
-                Image(systemName: "cube.transparent")
-                    .font(.system(size: 92, weight: .ultraLight))
-                    .foregroundStyle(AtlasColor.blue)
-                Text("M-028 / ESTADO 018")
-                    .font(AtlasType.mono(.caption2, weight: .semibold))
-                    .foregroundStyle(AtlasColor.inkMuted)
-            }
-        }
-        .frame(height: 260)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-    }
-
-    private var capabilityRow: some View {
-        HStack(spacing: 8) {
-            capability("ARKit", available: AtlasDeviceCapabilities.worldTrackingSupported)
-            capability("LiDAR", available: AtlasDeviceCapabilities.lidarSceneReconstructionSupported)
-            capability("RoomPlan", available: AtlasDeviceCapabilities.roomPlanSupported)
-        }
-    }
-
-    private func capability(_ name: String, available: Bool) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(available ? AtlasColor.healthy : AtlasColor.inkMuted).frame(width: 6, height: 6)
-            Text(name)
-                .font(AtlasType.label(.caption2, weight: .semibold))
-        }
-        .foregroundStyle(available ? AtlasColor.healthy : AtlasColor.inkMuted)
-        .padding(.horizontal, 9)
-        .padding(.vertical, 6)
-        .background(AtlasColor.surfaceSecondary)
-        .clipShape(Capsule())
-    }
-
-    private func detailSection(_ index: String, _ title: String, rows: [(String, String)]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            AtlasSectionLabel(index: index, title: title)
-            ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
-                HStack {
-                    Text(row.0)
-                        .font(AtlasType.body(.subheadline))
-                        .foregroundStyle(AtlasColor.inkSecondary)
-                    Spacer()
-                    Text(row.1)
-                        .font(AtlasType.body(.subheadline, weight: .semibold))
-                        .foregroundStyle(AtlasColor.ink)
-                }
-                .padding(.vertical, 8)
-                if idx < rows.count - 1 { AtlasDivider() }
-            }
-        }
+        .task { if store.selectedDigitalTwin == nil { await store.loadDigitalTwin() } }
     }
 }

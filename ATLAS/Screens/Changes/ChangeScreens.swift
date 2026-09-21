@@ -2,258 +2,163 @@ import SwiftUI
 
 struct ChangesScreen: View {
     let open: (AtlasRoute) -> Void
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 26) {
-                AtlasEditorialHeader(
-                    eyebrow: "CHANGES",
-                    title: "La memoria cronológica de tu mundo físico.",
-                    subtitle: "Cada evento conserva qué cambió, cuándo ocurrió y qué evidencia lo respalda."
-                )
+            LazyVStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 7) {
+                    AtlasSectionLabel(index: "03", title: "CHANGES")
+                    Text("Cambios")
+                        .font(AtlasType.display(.largeTitle, weight: .semibold))
+                        .tracking(-1.1)
+                        .foregroundStyle(AtlasColor.ink)
+                    Text("Una memoria cronológica de tu mundo físico.")
+                        .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
+                }
 
-                VStack(spacing: 0) {
-                    ForEach(AtlasSampleData.changes) { change in
-                        ChangeRow(change: change) { open(.changeDetail) }
+                if store.changes.isEmpty {
+                    AtlasEmptyState(title: "Sin cambios todavía", detail: "ATLAS necesita estados comparables para detectar diferencias.", symbol: "clock.arrow.circlepath")
+                } else {
+                    ForEach(store.changes) { change in
+                        ChangeRow(change: change.presentation(assetName: assetName(change.assetId))) {
+                            Task { await store.selectChange(change.id); open(.changeDetail) }
+                        }
                     }
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(20)
             .padding(.bottom, 28)
         }
+        .refreshable { await store.bootstrap() }
     }
+
+    private func assetName(_ id: String) -> String { store.assets.first(where: { $0.id == id })?.name ?? "Activo" }
 }
 
 struct ChangeDetailScreen: View {
     let open: (AtlasRoute) -> Void
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 26) {
-                    AtlasEditorialHeader(
-                        eyebrow: "CHANGE / GEOMETRY",
-                        title: "+4,2 cm detectados.",
-                        subtitle: "Estudio 04 · Sala · 18 sep 2026 · 14:22",
-                        backAction: { dismiss() }
-                    )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    AtlasBackHeader(title: "Detalle de cambio", eyebrow: "CHANGE / EVIDENCE")
+                    if let change = store.selectedChange {
+                        AtlasSectionLabel(index: "01", title: change.changeType.uppercased())
+                        Text(change.title)
+                            .font(AtlasType.display(.title, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                        Text(change.description)
+                            .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary).lineSpacing(4)
 
-                    ComparisonView()
-
-                    VStack(alignment: .leading, spacing: 14) {
-                        AtlasSectionLabel(index: "01", title: "DETECTED CHANGE")
-                        detail("Tipo", "Geometría")
-                        detail("Confianza", "92%")
-                        detail("Origen", "Captura iPhone")
-                        detail("Estado anterior", "017")
-                        detail("Estado actual", "018")
-                    }
-
-                    AIInsight(
-                        title: "La pared occidental presenta una diferencia medible.",
-                        text: "El cambio excede el margen observado entre capturas previas. ATLAS recomienda verificar si corresponde a obra, movimiento temporal u otra modificación física.",
-                        confidence: "92%"
-                    )
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        AtlasSectionLabel(index: "02", title: "EVIDENCE", trailing: "2 estados")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                EvidenceCard(evidence: .init(title: "Estado 017", detail: "12 sep · captura base", symbol: "photo"))
-                                EvidenceCard(evidence: .init(title: "Estado 018", detail: "20 sep · captura actual", symbol: "photo"))
-                            }
+                        HStack(spacing: 8) {
+                            Metric(value: change.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "—", label: "Confianza")
+                            Metric(value: change.severity.atlasDisplay, label: "Severidad")
                         }
-                    }
 
-                    AtlasPrimaryButton(title: "Comparar estados", symbol: "rectangle.split.2x1") { open(.compare) }
+                        MetadataLabel(title: "Activo", value: assetName(change.assetId))
+                        MetadataLabel(title: "Timestamp", value: change.createdAt.atlasFull)
+                        MetadataLabel(title: "Source", value: [change.fromStateId, change.toStateId].compactMap { $0 }.isEmpty ? "Estado registrado" : "Comparación de estados")
+
+                        AtlasSectionLabel(index: "02", title: "BEFORE / AFTER")
+                        ComparisonView()
+
+                        AIInsight(title: "Interpretación", text: change.description.ifEmpty("ATLAS registró una diferencia entre estados. Revisa la evidencia antes de tomar una acción."), confidence: change.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "N/A")
+
+                        AtlasPrimaryButton(title: "Comparar estados", symbol: "rectangle.split.2x1") {
+                            Task { await store.loadComparison(assetId: change.assetId); open(.compare) }
+                        }
+                    } else {
+                        AtlasLoadingState(title: "Cargando cambio…", detail: "Recuperando evidencia y estados relacionados.")
+                    }
                 }
                 .padding(20)
             }
         }
     }
 
-    private func detail(_ key: String, _ value: String) -> some View {
-        HStack {
-            Text(key).font(AtlasType.body(.subheadline)).foregroundStyle(AtlasColor.inkSecondary)
-            Spacer()
-            Text(value).font(AtlasType.body(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
-        }
-        .padding(.vertical, 7)
-    }
+    private func assetName(_ id: String) -> String { store.assets.first(where: { $0.id == id })?.name ?? "Activo" }
 }
 
 struct CompareScreen: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var stateA = "12 SEP"
-    @State private var stateB = "20 SEP"
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 26) {
-                    AtlasEditorialHeader(
-                        eyebrow: "COMPARE",
-                        title: "Entiende qué cambió, no solo que cambió.",
-                        subtitle: "Compara estados visuales, geometría, objetos, condición y medidas.",
-                        backAction: { dismiss() }
-                    )
-
-                    HStack(spacing: 12) {
-                        statePicker("ESTADO A", selection: $stateA)
-                        Image(systemName: "arrow.right")
-                            .foregroundStyle(AtlasColor.inkMuted)
-                        statePicker("ESTADO B", selection: $stateB)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    AtlasBackHeader(title: "Compare", eyebrow: "WORLD STATE / DIFF")
+                    if let comparison = store.selectedComparison {
+                        ComparisonView()
+                        AtlasSectionLabel(index: "01", title: "DETECTED CHANGES", trailing: String(format: "%02d", comparison.changes.count))
+                        if comparison.changes.isEmpty {
+                            AtlasEmptyState(title: "Sin diferencias", detail: "Los estados comparados no contienen diferencias estructuradas registradas.", symbol: "equal")
+                        } else {
+                            ForEach(Array(comparison.changes.enumerated()), id: \.offset) { index, change in
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(String(format: "%02d", index + 1)).font(AtlasType.mono(.caption2)).foregroundStyle(AtlasColor.blue)
+                                    Text(change["field"]?.stringValue ?? change["type"]?.stringValue ?? "Cambio")
+                                        .font(AtlasType.heading(.headline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                                    Text(change["detail"]?.stringValue ?? change["description"]?.stringValue ?? "Diferencia registrada por el motor de comparación.")
+                                        .font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                                }
+                                .padding(.vertical, 10)
+                                AtlasDivider()
+                            }
+                        }
+                        AIInsight(title: "ATLAS / COMPARISON", text: comparison.interpretation.ifEmpty("La comparación se basa únicamente en los estados registrados."), confidence: "TRACEABLE")
+                    } else {
+                        AtlasLoadingState(title: "Comparando estados…", detail: "Recuperando la última comparación disponible.")
                     }
-
-                    ComparisonView()
-                        .id("\(stateA)-\(stateB)")
-                        .transition(.opacity.combined(with: .scale(scale: 0.985)))
-                        .animation(reduceMotion ? nil : AtlasMotion.standardAnimation, value: "\(stateA)-\(stateB)")
-
-                    VStack(alignment: .leading, spacing: 0) {
-                        AtlasSectionLabel(index: "01", title: "DIFFERENCES", trailing: "4 cambios")
-                            .padding(.bottom, 8)
-                        comparisonRow("Geometría", "Pared oeste", "+4,2 cm", AtlasColor.attention)
-                        AtlasDivider()
-                        comparisonRow("Superficie", "Acabado", "Modificado", AtlasColor.warning)
-                        AtlasDivider()
-                        comparisonRow("Objetos", "Mesa auxiliar", "Añadido", AtlasColor.blue)
-                        AtlasDivider()
-                        comparisonRow("Condición", "General", "Sin cambios", AtlasColor.healthy)
-                    }
-
-                    AIInsight(
-                        title: "El cambio principal está concentrado en una zona.",
-                        text: "La mayor diferencia aparece en la pared occidental. El resto del espacio conserva una condición consistente con el estado del 12 de septiembre.",
-                        confidence: "90%"
-                    )
                 }
                 .padding(20)
             }
         }
-    }
-
-    private func statePicker(_ label: String, selection: Binding<String>) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(label)
-                .font(AtlasType.label(.caption2, weight: .semibold))
-                .foregroundStyle(AtlasColor.inkMuted)
-            Menu {
-                ForEach(["03 SEP", "12 SEP", "18 SEP", "20 SEP"], id: \.self) { date in
-                    Button(date) {
-                        AtlasHaptics.selection()
-                        if reduceMotion { selection.wrappedValue = date }
-                        else { withAnimation(AtlasMotion.standardAnimation) { selection.wrappedValue = date } }
-                    }
-                }
-            } label: {
-                HStack {
-                    Text(selection.wrappedValue)
-                        .font(AtlasType.body(.subheadline, weight: .semibold))
-                        .foregroundStyle(AtlasColor.ink)
-                    Spacer()
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(AtlasColor.inkMuted)
-                }
-                .padding(.horizontal, 12)
-                .frame(height: 44)
-                .background(AtlasColor.surfaceSecondary)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func comparisonRow(_ category: String, _ item: String, _ delta: String, _ color: Color) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(category.uppercased())
-                    .font(AtlasType.label(.caption2, weight: .semibold))
-                    .foregroundStyle(AtlasColor.inkMuted)
-                Text(item)
-                    .font(AtlasType.body(.body, weight: .medium))
-                    .foregroundStyle(AtlasColor.ink)
-            }
-            Spacer()
-            Text(delta)
-                .font(AtlasType.mono(.caption, weight: .semibold))
-                .foregroundStyle(color)
-        }
-        .padding(.vertical, 13)
+        .task { if store.selectedComparison == nil { await store.loadComparison() } }
     }
 }
 
 struct AnomalyDetailScreen: View {
     let open: (AtlasRoute) -> Void
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 26) {
-                    AtlasEditorialHeader(
-                        eyebrow: "ANOMALY / SURFACE",
-                        title: "Posible humedad recurrente.",
-                        subtitle: "Apartamento Norte · Cocina",
-                        backAction: { dismiss() }
-                    )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    AtlasBackHeader(title: "Anomalía", eyebrow: "ANOMALY / TRACE")
+                    if let anomaly = store.selectedAnomaly {
+                        HStack { StatusBadge(health: anomaly.severity.atlasHealth); Spacer(); Text(anomaly.status.uppercased()).font(AtlasType.mono(.caption2)).foregroundStyle(AtlasColor.inkMuted) }
+                        Text(anomaly.title).font(AtlasType.display(.title, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                        Text(anomaly.description).font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
-                    HStack(spacing: 10) {
-                        StatusBadge(health: .warning)
-                        Text("CONFIANZA 94%")
-                            .font(AtlasType.mono(.caption2, weight: .semibold))
-                            .foregroundStyle(AtlasColor.inkMuted)
-                    }
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        AtlasSectionLabel(index: "01", title: "EVOLUTION")
-                        detail("Primera detección", "14 sep · 08:41")
-                        detail("Última observación", "20 sep · 09:42")
-                        detail("Severidad potencial", "Media")
-                        detail("Ubicación", "Pared norte · cocina")
-                    }
-
-                    AIInsight(
-                        title: "La señal visual aparece en tres estados consecutivos.",
-                        text: "La evolución de la zona es consistente con una condición que merece inspección. ATLAS no determina la causa física sin verificación adicional.",
-                        confidence: "94%"
-                    )
-
-                    VStack(alignment: .leading, spacing: 12) {
-                        AtlasSectionLabel(index: "02", title: "EVIDENCE", trailing: "3 estados")
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(["14 sep", "18 sep", "20 sep"], id: \.self) { date in
-                                    EvidenceCard(evidence: .init(title: date, detail: "Pared norte · cocina", symbol: "photo"))
-                                }
-                            }
+                        HStack(spacing: 8) {
+                            Metric(value: anomaly.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "—", label: "Confianza")
+                            Metric(value: anomaly.severity.atlasDisplay, label: "Severidad")
                         }
-                    }
+                        MetadataLabel(title: "Activo", value: assetName(anomaly.assetId))
+                        MetadataLabel(title: "Ubicación", value: anomaly.locationText.ifEmpty("No registrada"))
+                        MetadataLabel(title: "Primera detección", value: anomaly.firstDetected.atlasFull)
+                        MetadataLabel(title: "Última observación", value: anomaly.lastObserved.atlasFull)
+                        AIInsight(title: "ATLAS interpretation", text: anomaly.description.ifEmpty("Anomalía registrada. La severidad y confianza provienen de la evidencia disponible."), confidence: anomaly.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "N/A")
 
-                    VStack(spacing: 10) {
-                        AtlasPrimaryButton(title: "Crear orden de trabajo", symbol: "doc.badge.plus") { open(.createWorkOrder) }
-                        AtlasSecondaryButton(title: "Solicitar inspección", symbol: "checklist") { open(.newInspection) }
-                        Button("Descartar hallazgo") {}
-                            .font(AtlasType.body(.body, weight: .semibold))
-                            .foregroundStyle(AtlasColor.critical)
+                        AtlasPrimaryButton(title: "Crear orden de trabajo", symbol: "wrench.and.screwdriver") {
+                            Task { await store.createWorkOrderFromSelectedAnomaly(); open(.workOrders) }
+                        }
+                        AtlasSecondaryButton(title: "Solicitar inspección", symbol: "checklist") {
+                            Task { await store.requestInspectionForSelectedAnomaly(); open(.inspections) }
+                        }
+                        Button("Descartar anomalía") { Task { await store.markSelectedAnomalyDismissed() } }
+                            .font(AtlasType.body(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.critical)
                             .frame(maxWidth: .infinity, minHeight: 44)
+                    } else {
+                        AtlasLoadingState(title: "Cargando anomalía…", detail: "Recuperando evolución y evidencia.")
                     }
-                }
-                .padding(20)
+                }.padding(20)
             }
         }
     }
 
-    private func detail(_ key: String, _ value: String) -> some View {
-        HStack {
-            Text(key).font(AtlasType.body(.subheadline)).foregroundStyle(AtlasColor.inkSecondary)
-            Spacer()
-            Text(value).font(AtlasType.body(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
-        }
-        .padding(.vertical, 7)
-    }
+    private func assetName(_ id: String) -> String { store.assets.first(where: { $0.id == id })?.name ?? "Activo" }
 }

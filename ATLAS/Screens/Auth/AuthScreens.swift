@@ -190,12 +190,11 @@ struct OnboardingScreen: View {
 }
 
 struct LoginScreen: View {
-    let continueAction: () -> Void
-    let createAction: () -> Void
-
+    @EnvironmentObject private var store: AtlasAppStore
     @State private var email = ""
     @State private var password = ""
     @State private var showingRecovery = false
+    @State private var showingCreateAccount = false
 
     var body: some View {
         AtlasPage {
@@ -208,38 +207,46 @@ struct LoginScreen: View {
         }
         .sheet(isPresented: $showingRecovery) {
             PasswordRecoverySheet()
+                .environmentObject(store)
                 .presentationDetents([.medium])
+        }
+        .sheet(isPresented: $showingCreateAccount) {
+            CreateAccountSheet()
+                .environmentObject(store)
+                .presentationDetents([.large])
+        }
+        .alert("No pudimos acceder", isPresented: Binding(
+            get: { store.errorMessage != nil },
+            set: { if !$0 { store.clearError() } }
+        )) {
+            Button("Entendido", role: .cancel) { store.clearError() }
+        } message: {
+            Text(store.errorMessage ?? "")
         }
     }
 
     private var loginHero: some View {
         ZStack(alignment: .bottomLeading) {
             AtlasColor.navy
-
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
-                    AtlasMark(size: 34)
-                        .environment(\.colorScheme, .dark)
+                    AtlasMark(size: 34).environment(\.colorScheme, .dark)
                     Text("ATLAS")
                         .font(AtlasType.heading(.headline, weight: .bold))
                         .tracking(2.3)
                         .foregroundStyle(.white)
                     Spacer()
-                    Text("SECURE / 01")
+                    Text("SECURE / API")
                         .font(AtlasType.mono(.caption2, weight: .semibold))
                         .foregroundStyle(Color.white.opacity(0.46))
                 }
-
                 Spacer()
-
                 Rectangle().fill(AtlasColor.blue).frame(width: 44, height: 3)
-
                 Text("Accede a tu\nmundo físico.")
                     .font(AtlasType.display(.largeTitle, weight: .semibold))
                     .tracking(-1.3)
                     .foregroundStyle(.white)
-
-                Text("Estados, evidencia e inspecciones conectados a una sola memoria.")
+                Text("Tu sesión, activos, evidencia e inteligencia se sincronizan con ATLAS API.")
                     .font(AtlasType.body(.body))
                     .foregroundStyle(Color.white.opacity(0.7))
                     .lineSpacing(4)
@@ -261,10 +268,11 @@ struct LoginScreen: View {
             }
             .atlasStagger(1)
 
-            AtlasPrimaryButton(title: "Continuar", symbol: "arrow.right") {
-                AtlasHaptics.success()
-                continueAction()
+            AtlasPrimaryButton(title: store.isLoading ? "Conectando…" : "Continuar", symbol: "arrow.right") {
+                Task { _ = await store.login(email: email, password: password) }
             }
+            .disabled(store.isLoading || email.isEmpty || password.isEmpty)
+            .opacity((store.isLoading || email.isEmpty || password.isEmpty) ? 0.55 : 1)
             .atlasStagger(2)
 
             HStack(spacing: 12) {
@@ -277,9 +285,10 @@ struct LoginScreen: View {
 
             SignInWithAppleButton(.signIn, onRequest: { request in
                 request.requestedScopes = [.email, .fullName]
-            }, onCompletion: { _ in
-                AtlasHaptics.success()
-                continueAction()
+            }, onCompletion: { result in
+                guard case .success(let authorization) = result,
+                      let credential = authorization.credential as? ASAuthorizationAppleIDCredential else { return }
+                Task { _ = await store.signInWithApple(credential: credential) }
             })
             .signInWithAppleButtonStyle(.black)
             .frame(height: 52)
@@ -293,7 +302,7 @@ struct LoginScreen: View {
                 Spacer()
                 Button("Crear cuenta →") {
                     AtlasHaptics.selection()
-                    createAction()
+                    showingCreateAccount = true
                 }
                 .font(AtlasType.body(.subheadline, weight: .semibold))
                 .foregroundStyle(AtlasColor.blue)
@@ -312,51 +321,120 @@ struct LoginScreen: View {
                 .font(AtlasType.label(.caption2, weight: .semibold))
                 .tracking(0.9)
                 .foregroundStyle(AtlasColor.inkMuted)
-
             Group {
                 if secure {
                     SecureField("••••••••", text: text)
+                        .textContentType(.password)
                 } else {
                     TextField("nombre@empresa.com", text: text)
                         .keyboardType(.emailAddress)
                         .textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                 }
             }
             .font(AtlasType.body(.body, weight: .medium))
-            .padding(.horizontal, 0)
             .frame(minHeight: 48)
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(AtlasColor.lineStrong).frame(height: 1)
-            }
+            .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.lineStrong).frame(height: 1) }
         }
     }
 }
 
 private struct PasswordRecoverySheet: View {
+    @EnvironmentObject private var store: AtlasAppStore
     @Environment(\.dismiss) private var dismiss
     @State private var email = ""
+    @State private var sent = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Recuperar acceso")
                 .font(AtlasType.heading(.title2))
                 .foregroundStyle(AtlasColor.ink)
-            Text("Ingresa tu correo y te enviaremos las instrucciones disponibles para tu cuenta.")
+            Text(sent ? "Solicitud enviada. Revisa el flujo configurado por tu backend." : "Ingresa tu correo para solicitar la recuperación de tu cuenta.")
                 .font(AtlasType.body(.body))
                 .foregroundStyle(AtlasColor.inkSecondary)
             TextField("correo@empresa.com", text: $email)
                 .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
                 .padding(.horizontal, 14)
                 .frame(height: 50)
                 .background(AtlasColor.surfaceSecondary)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-            AtlasPrimaryButton(title: "Enviar instrucciones") {
-                AtlasHaptics.success()
-                dismiss()
+            AtlasPrimaryButton(title: sent ? "Cerrar" : "Enviar instrucciones") {
+                if sent { dismiss(); return }
+                Task {
+                    do {
+                        _ = try await AtlasAPIClient.shared.requestPasswordReset(email: email)
+                        await MainActor.run { sent = true; AtlasHaptics.success() }
+                    } catch {
+                        await MainActor.run { AtlasHaptics.warning() }
+                    }
+                }
             }
         }
         .padding(24)
         .background(AtlasColor.background)
         .atlasScreenEntrance(distance: 14)
+    }
+}
+
+private struct CreateAccountSheet: View {
+    @EnvironmentObject private var store: AtlasAppStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var fullName = ""
+    @State private var organization = "My ATLAS"
+    @State private var email = ""
+    @State private var password = ""
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    AtlasSectionLabel(index: "01", title: "NUEVA CUENTA")
+                    Text("Crea tu espacio de inteligencia física.")
+                        .font(AtlasType.display(.title, weight: .semibold))
+                        .foregroundStyle(AtlasColor.ink)
+                    Text("El backend creará tu usuario, organización y sesión segura.")
+                        .font(AtlasType.body(.body))
+                        .foregroundStyle(AtlasColor.inkSecondary)
+
+                    createField("NOMBRE", $fullName)
+                    createField("ORGANIZACIÓN", $organization)
+                    createField("EMAIL", $email)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("CONTRASEÑA · MÍNIMO 10 CARACTERES")
+                            .font(AtlasType.label(.caption2, weight: .semibold))
+                            .foregroundStyle(AtlasColor.inkMuted)
+                        SecureField("••••••••••", text: $password)
+                            .font(AtlasType.body(.body))
+                            .frame(height: 48)
+                            .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.lineStrong).frame(height: 1) }
+                    }
+
+                    AtlasPrimaryButton(title: store.isLoading ? "Creando…" : "Crear cuenta", symbol: "person.badge.plus") {
+                        Task {
+                            let ok = await store.register(email: email, password: password, fullName: fullName, organizationName: organization)
+                            if ok { dismiss() }
+                        }
+                    }
+                    .disabled(store.isLoading || email.isEmpty || password.count < 10)
+                }
+                .padding(22)
+            }
+            .background(AtlasColor.background)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Cerrar") { dismiss() } } }
+        }
+    }
+
+    private func createField(_ label: String, _ text: Binding<String>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(label).font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.inkMuted)
+            TextField(label, text: text)
+                .textInputAutocapitalization(label == "EMAIL" ? .never : .words)
+                .font(AtlasType.body(.body))
+                .frame(height: 48)
+                .overlay(alignment: .bottom) { Rectangle().fill(AtlasColor.lineStrong).frame(height: 1) }
+        }
     }
 }

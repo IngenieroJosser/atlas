@@ -2,143 +2,119 @@ import SwiftUI
 
 struct ReportsScreen: View {
     let open: (AtlasRoute) -> Void
-    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var store: AtlasAppStore
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 26) {
-                    AtlasEditorialHeader(
-                        eyebrow: "REPORTS",
-                        title: "Documentos que explican, no que decoran.",
-                        subtitle: "Inspecciones, historial de activos, condición, cambios y mantenimiento.",
-                        backAction: { dismiss() }
-                    )
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    AtlasBackHeader(title: "Reports", eyebrow: "ATLAS / REPORTS")
+                    Text("Informes construidos a partir de estados, inspecciones, cambios y evidencia.")
+                        .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
-                    reportGroup("01", "INSPECTION REPORTS", [
-                        ("Inspección M-028", "20 sep · 7 evidencias"),
-                        ("Entrega Apartamento Norte", "19 sep · 18 evidencias")
-                    ])
-                    reportGroup("02", "CHANGE REPORTS", [
-                        ("Estudio 04 / Estado 017 → 018", "18–20 sep · 4 cambios")
-                    ])
-                    reportGroup("03", "MAINTENANCE REPORTS", [
-                        ("M-028 / Historial preventivo", "Jun–sep 2026")
-                    ])
-                }
-                .padding(20)
-            }
-        }
-    }
-
-    private func reportGroup(_ index: String, _ title: String, _ rows: [(String, String)]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            AtlasSectionLabel(index: index, title: title)
-            ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
-                Button { open(.reportDetail) } label: {
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "doc.text")
-                            .foregroundStyle(AtlasColor.blue)
-                            .frame(width: 28)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(row.0).font(AtlasType.heading(.headline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
-                            Text(row.1).font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                    if store.reports.isEmpty {
+                        AtlasEmptyState(title: "Sin reportes", detail: "Genera un reporte cuando necesites consolidar evidencia y hallazgos.", symbol: "doc.text")
+                    } else {
+                        ForEach(store.reports) { report in
+                            Button {
+                                Task { await store.selectReport(report.id); open(.reportDetail) }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 7) {
+                                    HStack {
+                                        Text(report.reportType.uppercased()).font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.blue)
+                                        Spacer()
+                                        Text(report.createdAt.atlasCompact).font(AtlasType.mono(.caption2)).foregroundStyle(AtlasColor.inkMuted)
+                                    }
+                                    Text(report.title).font(AtlasType.heading(.headline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
+                                    Text(report.periodLabel.ifEmpty(report.status.atlasDisplay)).font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                                }.padding(.vertical, 14)
+                            }.buttonStyle(AtlasPressButtonStyle())
+                            AtlasDivider()
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(AtlasColor.inkMuted)
                     }
-                    .padding(.vertical, 14)
-                }
-                .buttonStyle(AtlasPressButtonStyle())
-                if idx < rows.count - 1 { AtlasDivider() }
+
+                    if let asset = store.assets.first {
+                        AtlasPrimaryButton(title: "Generar reporte de condición", symbol: "doc.badge.plus") {
+                            Task {
+                                if let report = await store.createReport(type: "condition", title: "Condition Report · \(asset.name)", assetId: asset.id, period: "Current state") {
+                                    await store.selectReport(report.id); open(.reportDetail)
+                                }
+                            }
+                        }
+                    }
+                }.padding(20)
             }
         }
     }
 }
 
 struct ReportDetailScreen: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var showShare = false
+    @EnvironmentObject private var store: AtlasAppStore
+    @State private var shareMessage: String?
+    @State private var exportURL: URL?
 
     var body: some View {
         AtlasPage {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 28) {
-                    AtlasEditorialHeader(
-                        eyebrow: "REPORT / CONDITION",
-                        title: "Unidad M-028 · Estado y condición.",
-                        subtitle: "Periodo · 14–20 septiembre 2026",
-                        backAction: { dismiss() },
-                        trailingSymbol: "square.and.arrow.up",
-                        trailingAction: { showShare = true }
-                    )
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    AtlasBackHeader(title: "Report", eyebrow: "EDITORIAL / TRACEABLE")
+                    if let report = store.selectedReport {
+                        Text(report.reportType.uppercased()).font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.blue)
+                        Text(report.title).font(AtlasType.display(.largeTitle, weight: .semibold)).tracking(-1).foregroundStyle(AtlasColor.ink)
+                        Text([report.periodLabel, report.createdAt.atlasFull].filter { !$0.isEmpty }.joined(separator: " · "))
+                            .font(AtlasType.mono(.caption)).foregroundStyle(AtlasColor.inkMuted)
 
-                    Text("RESUMEN")
-                        .font(AtlasType.label(.caption2, weight: .semibold))
-                        .tracking(0.8)
-                        .foregroundStyle(AtlasColor.blue)
-                    Text("La condición general se mantiene estable. Se recomienda revisar el sistema de montaje por una variación visual presente en dos inspecciones consecutivas.")
-                        .font(AtlasType.heading(.title2, weight: .semibold))
-                        .foregroundStyle(AtlasColor.ink)
-                        .lineSpacing(4)
+                        AtlasSectionLabel(index: "01", title: "SUMMARY")
+                        Text(report.summary.ifEmpty("Reporte generado por ATLAS a partir de información trazable del sistema."))
+                            .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary).lineSpacing(4)
 
-                    reportSection("01", "FINDINGS", "1 hallazgo en seguimiento · 0 críticos")
-                    reportSection("02", "CHANGES", "2 variaciones visuales · sin cambio de condición general")
-                    reportSection("03", "EVIDENCE", "7 fotografías · 2 estados · OCR disponible")
-                    reportSection("04", "RECOMMENDATIONS", "Inspeccionar fijaciones antes de la próxima operación prolongada.")
+                        reportBlock("02", "FINDINGS", report.findingsJson.count)
+                        reportBlock("03", "CHANGES", report.changesJson.count)
+                        reportBlock("04", "EVIDENCE", report.evidenceJson.count)
+                        reportBlock("05", "RECOMMENDATIONS", report.recommendationsJson.count)
 
-                    HStack {
-                        Text("GENERATED BY ATLAS")
-                            .font(AtlasType.mono(.caption2, weight: .semibold))
-                            .foregroundStyle(AtlasColor.inkMuted)
-                        Spacer()
-                        Text("20 SEP 2026 · 15:48")
-                            .font(AtlasType.mono(.caption2))
-                            .foregroundStyle(AtlasColor.inkMuted)
-                    }
-                    .padding(.top, 12)
+                        if let shareMessage { Text(shareMessage).font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.healthy) }
 
-                    AtlasPrimaryButton(title: "Exportar / Compartir", symbol: "square.and.arrow.up") { showShare = true }
-                }
-                .padding(20)
+                        AtlasPrimaryButton(title: "Generar PDF", symbol: "doc.richtext") {
+                            Task {
+                                do {
+                                    let data = try await AtlasAPIClient.shared.exportReport(report.id)
+                                    let url = FileManager.default.temporaryDirectory.appendingPathComponent("ATLAS-\(report.id).pdf")
+                                    try data.write(to: url, options: .atomic)
+                                    await MainActor.run {
+                                        exportURL = url
+                                        shareMessage = "PDF listo · \(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))"
+                                    }
+                                } catch { await MainActor.run { shareMessage = error.localizedDescription } }
+                            }
+                        }
+                        if let exportURL {
+                            ShareLink(item: exportURL) {
+                                Label("Compartir PDF", systemImage: "square.and.arrow.up")
+                                    .font(AtlasType.body(.body, weight: .semibold))
+                                    .foregroundStyle(AtlasColor.blue)
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                        }
+                        AtlasSecondaryButton(title: "Crear enlace compartido", symbol: "link") {
+                            Task {
+                                do {
+                                    let shared = try await AtlasAPIClient.shared.shareReport(report.id)
+                                    await MainActor.run { shareMessage = "Token válido hasta \(shared.expiresAt.atlasFull): \(shared.token)" }
+                                } catch { await MainActor.run { shareMessage = error.localizedDescription } }
+                            }
+                        }
+                    } else { AtlasLoadingState(title: "Cargando reporte…", detail: "Recuperando resumen, hallazgos y evidencia.") }
+                }.padding(20)
             }
         }
-        .sheet(isPresented: $showShare) {
-            ReportShareSheet()
-                .presentationDetents([.medium])
-        }
     }
 
-    private func reportSection(_ index: String, _ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            AtlasSectionLabel(index: index, title: title)
-            Text(value)
-                .font(AtlasType.body(.body))
-                .foregroundStyle(AtlasColor.inkSecondary)
-                .lineSpacing(4)
+    private func reportBlock(_ index: String, _ title: String, _ count: Int) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            AtlasSectionLabel(index: index, title: title, trailing: String(format: "%02d", count))
+            Text(count == 0 ? "Sin elementos en esta sección." : "\(count) elementos trazables incluidos por el backend.")
+                .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
         }
-    }
-}
-
-private struct ReportShareSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text("Exportar reporte")
-                .font(AtlasType.heading(.title2))
-                .foregroundStyle(AtlasColor.ink)
-            Text("La generación de PDF y el destino de exportación se conectarán al backend/document engine. La UI no afirma que el archivo ya exista.")
-                .font(AtlasType.body(.body))
-                .foregroundStyle(AtlasColor.inkSecondary)
-                .lineSpacing(4)
-            PrimaryActionRow(title: "PDF", subtitle: "Preparar documento", symbol: "doc.richtext") { dismiss() }
-            AtlasDivider()
-            PrimaryActionRow(title: "Compartir enlace", subtitle: "Disponible cuando exista sincronización remota", symbol: "link") { dismiss() }
-        }
-        .padding(24)
-        .background(AtlasColor.background)
     }
 }

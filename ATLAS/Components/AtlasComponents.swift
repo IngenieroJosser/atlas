@@ -748,3 +748,15 @@ struct FilterSheet<Content: View>: View {
         .atlasScreenEntrance(distance: 14)
     }
 }
+
+extension AtlasEmptyState {
+    init(title: String, detail: String, symbol: String) {
+        self.init(
+            eyebrow: "ATLAS / EMPTY",
+            title: title,
+            detail: detail,
+            actionTitle: nil,
+            action: nil
+        )
+    }
+}

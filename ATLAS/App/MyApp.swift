@@ -2,6 +2,8 @@ import SwiftUI
 
 @main
 struct MyApp: App {
+    @StateObject private var store = AtlasAppStore.shared
+
     init() {
         AtlasFontRegistry.registerBundledFonts()
     }
@@ -9,6 +11,7 @@ struct MyApp: App {
     var body: some Scene {
         WindowGroup {
             AtlasRootView()
+                .environmentObject(store)
         }
     }
 }
