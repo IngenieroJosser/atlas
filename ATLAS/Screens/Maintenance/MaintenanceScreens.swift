@@ -12,10 +12,10 @@ struct MaintenanceScreen: View {
                     HStack(spacing: 8) {
                         Metric(value: String(store.maintenance.filter { $0.status.lowercased() == "upcoming" }.count), label: "Upcoming")
                         Metric(value: String(store.maintenance.filter { $0.status.lowercased() == "overdue" }.count), label: "Overdue")
-                        Metric(value: String(store.maintenance.filter { $0.suggestedByAtlas }.count), label: "ATLAS")
+                        Metric(value: String(store.maintenance.filter { $0.suggestedByAtlas }.count), label: "Atlas")
                     }
                     if store.maintenance.isEmpty {
-                        AtlasEmptyState(title: "Sin mantenimiento", detail: "Las tareas planificadas o sugeridas por ATLAS aparecerán aquí.", symbol: "wrench.and.screwdriver")
+                        AtlasEmptyState(title: "Sin mantenimiento", detail: "Las tareas planificadas o sugeridas por Atlas aparecerán aquí.", symbol: "wrench.and.screwdriver")
                     } else {
                         ForEach(store.maintenance) { task in
                             Button {
@@ -29,7 +29,7 @@ struct MaintenanceScreen: View {
                                     }
                                     Text(task.title).font(AtlasType.heading(.headline, weight: .semibold)).foregroundStyle(AtlasColor.ink)
                                     Text("\(assetName(task.assetId)) · \(task.priority.atlasDisplay)").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
-                                    if task.suggestedByAtlas { Text("SUGGESTED BY ATLAS").font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.blue) }
+                                    if task.suggestedByAtlas { Text("SUGGESTED BY Atlas").font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.blue) }
                                 }
                                 .padding(.vertical, 14)
                             }
@@ -62,7 +62,7 @@ struct MaintenanceDetailScreen: View {
                         MetadataLabel(title: "Prioridad", value: task.priority.atlasDisplay)
                         MetadataLabel(title: "Fecha prevista", value: task.dueAt?.atlasFull ?? "Sin fecha")
                         MetadataLabel(title: "Responsable", value: task.assigneeUserId == nil ? "Sin asignar" : "Usuario asignado")
-                        MetadataLabel(title: "Origen", value: task.suggestedByAtlas ? "Sugerido por ATLAS" : (task.sourceType?.atlasDisplay ?? "Manual"))
+                        MetadataLabel(title: "Origen", value: task.suggestedByAtlas ? "Sugerido por Atlas" : (task.sourceType?.atlasDisplay ?? "Manual"))
 
                         if task.status.lowercased() != "completed" {
                             AtlasPrimaryButton(title: "Marcar completado", symbol: "checkmark") { Task { await store.completeMaintenance(task.id) } }

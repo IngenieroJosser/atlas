@@ -5,7 +5,7 @@ extension APIAssetSummary {
         AtlasAsset(
             kind: category.uppercased(),
             name: name,
-            subtitle: [location, identifier].filter { !$0.isEmpty }.joined(separator: " · ").ifEmpty("Activo ATLAS"),
+            subtitle: [location, identifier].filter { !$0.isEmpty }.joined(separator: " · ").ifEmpty("Activo Atlas"),
             symbol: category.atlasSymbol,
             health: status.atlasHealth,
             updated: (latestStateAt ?? updatedAt).atlasRelative,
@@ -17,7 +17,7 @@ extension APIAssetSummary {
 
 extension APIAsset {
     var presentation: AtlasAsset {
-        AtlasAsset(kind: category.uppercased(), name: name, subtitle: [location, identifier].filter { !$0.isEmpty }.joined(separator: " · ").ifEmpty("Activo ATLAS"), symbol: category.atlasSymbol, health: status.atlasHealth, updated: updatedAt.atlasRelative, changes: 0, syncState: lastSyncedAt == nil ? .local : .synced)
+        AtlasAsset(kind: category.uppercased(), name: name, subtitle: [location, identifier].filter { !$0.isEmpty }.joined(separator: " · ").ifEmpty("Activo Atlas"), symbol: category.atlasSymbol, health: status.atlasHealth, updated: updatedAt.atlasRelative, changes: 0, syncState: lastSyncedAt == nil ? .local : .synced)
     }
 }
 

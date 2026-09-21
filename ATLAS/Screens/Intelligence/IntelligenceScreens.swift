@@ -17,7 +17,7 @@ struct AskAtlasScreen: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        AtlasBackHeader(title: "Ask ATLAS", eyebrow: "INTELLIGENCE / CONTEXT")
+                        AtlasBackHeader(title: "Ask Atlas", eyebrow: "INTELLIGENCE / CONTEXT")
                         Text("Pregunta sobre el mundo físico que ya registraste.")
                             .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
@@ -40,7 +40,7 @@ struct AskAtlasScreen: View {
                         }
 
                         HStack(alignment: .bottom, spacing: 10) {
-                            TextField("Pregunta a ATLAS…", text: $question, axis: .vertical)
+                            TextField("Pregunta a Atlas…", text: $question, axis: .vertical)
                                 .font(AtlasType.body(.body))
                                 .padding(.horizontal, 14).padding(.vertical, 12)
                                 .background(AtlasColor.surface)
@@ -52,7 +52,7 @@ struct AskAtlasScreen: View {
                         }
 
                         if store.isLoading {
-                            AtlasLoadingState(title: "ATLAS está consultando…", detail: "Buscando evidencia dentro de tus activos y estados.")
+                            AtlasLoadingState(title: "Atlas está consultando…", detail: "Buscando evidencia dentro de tus activos y estados.")
                         }
 
                         if let response = store.askResponse {
@@ -112,10 +112,10 @@ struct AtlasInsightScreen: View {
         AtlasPage {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    AtlasBackHeader(title: "ATLAS Insight", eyebrow: "INTELLIGENCE / TRACE")
+                    AtlasBackHeader(title: "Atlas Insight", eyebrow: "INTELLIGENCE / TRACE")
                     if let insight = store.selectedInsight ?? store.insights.first {
                         AIInsight(title: insight.title, text: insight.statement, confidence: insight.confidenceText.ifEmpty("TRACEABLE"))
-                        MetadataLabel(title: "Basis", value: insight.basis.ifEmpty("Información registrada en ATLAS"))
+                        MetadataLabel(title: "Basis", value: insight.basis.ifEmpty("Información registrada en Atlas"))
                         MetadataLabel(title: "Evidence refs", value: String(insight.evidenceRefs.count))
                         MetadataLabel(title: "Recommended action", value: insight.recommendation.ifEmpty("Sin recomendación adicional"))
                         Text("Creado · \(insight.createdAt.atlasFull)").font(AtlasType.mono(.caption)).foregroundStyle(AtlasColor.inkMuted)

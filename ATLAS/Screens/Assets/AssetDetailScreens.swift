@@ -85,7 +85,7 @@ struct AssetDetailScreen: View {
     }
 
     private func intelligence(_ detail: APIAssetDetail) -> some View {
-        let text = detail.latestState?.summary.ifEmpty("ATLAS conserva este activo listo para comparar contra futuros estados.") ?? "Todavía no existe un estado físico suficiente para generar una interpretación."
+        let text = detail.latestState?.summary.ifEmpty("Atlas conserva este activo listo para comparar contra futuros estados.") ?? "Todavía no existe un estado físico suficiente para generar una interpretación."
         return AIInsight(title: "Lectura actual", text: text, confidence: detail.latestState.map { String(format: "%.0f%%", $0.confidence * 100) } ?? "N/A")
     }
 
@@ -159,7 +159,7 @@ struct AssetDetailScreen: View {
             PrimaryActionRow(title: "Compare", subtitle: "Comparar estados históricos", symbol: "rectangle.split.2x1") {
                 Task { await store.loadComparison(); open(.compare) }
             }
-            PrimaryActionRow(title: "Ask ATLAS", subtitle: "Consultar con contexto de este activo", symbol: "sparkles") { open(.askAtlas) }
+            PrimaryActionRow(title: "Ask Atlas", subtitle: "Consultar con contexto de este activo", symbol: "sparkles") { open(.askAtlas) }
         }
     }
 }

@@ -38,7 +38,7 @@ struct ProfileScreen: View {
                 ])
                 section("SUPPORT", rows: [
                     ("Help", "questionmark.circle", AtlasRoute.help),
-                    ("About ATLAS", "info.circle", AtlasRoute.about)
+                    ("About Atlas", "info.circle", AtlasRoute.about)
                 ])
 
                 Button(role: .destructive) {
@@ -113,7 +113,7 @@ struct IntegrationsScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     AtlasBackHeader(title: "Integrations", eyebrow: "SYSTEM / EXTERNAL")
-                    Text("ATLAS solo muestra integraciones que el backend conoce. Una integración no configurada no se presenta como funcional.")
+                    Text("Atlas solo muestra integraciones que el backend conoce. Una integración no configurada no se presenta como funcional.")
                         .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
                     if store.integrations.isEmpty {
                         AtlasEmptyState(title: "Sin integraciones configuradas", detail: "Conecta servicios externos cuando realmente estén disponibles en tu backend.", symbol: "link")
@@ -162,7 +162,7 @@ struct SecurityScreen: View {
                         Text("Eliminar tu cuenta es permanente.")
                             .font(AtlasType.heading(.headline, weight: .semibold))
                             .foregroundStyle(AtlasColor.ink)
-                        Text("ATLAS eliminará tu cuenta, sesiones, preferencias y datos personales. Si eres el único miembro de una organización propia, también se eliminará ese espacio y sus datos. En organizaciones compartidas, la propiedad se transferirá a otro miembro y se retirará tu atribución personal.")
+                        Text("Atlas eliminará tu cuenta, sesiones, preferencias y datos personales. Si eres el único miembro de una organización propia, también se eliminará ese espacio y sus datos. En organizaciones compartidas, la propiedad se transferirá a otro miembro y se retirará tu atribución personal.")
                             .font(AtlasType.body(.caption))
                             .foregroundStyle(AtlasColor.inkSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -221,7 +221,7 @@ private struct DeleteAccountConfirmationSheet: View {
                     Text("Eliminar cuenta")
                         .font(AtlasType.display(.title, weight: .semibold))
                         .foregroundStyle(AtlasColor.ink)
-                    Text("Esta acción no se puede deshacer. Se cerrará tu sesión en este dispositivo y ATLAS solicitará al backend la eliminación permanente de la cuenta.")
+                    Text("Esta acción no se puede deshacer. Se cerrará tu sesión en este dispositivo y Atlas solicitará al backend la eliminación permanente de la cuenta.")
                         .font(AtlasType.body(.body))
                         .foregroundStyle(AtlasColor.inkSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -299,7 +299,7 @@ struct PrivacyScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     AtlasBackHeader(title: "Privacy", eyebrow: "DATA / CONTROL")
-                    Text("Los permisos del dispositivo se gestionan en iOS. Estas preferencias controlan el comportamiento de tu cuenta en ATLAS.")
+                    Text("Los permisos del dispositivo se gestionan en iOS. Estas preferencias controlan el comportamiento de tu cuenta en Atlas.")
                         .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
                     Toggle("Notificaciones de atención", isOn: $attention)
                     Toggle("Actualizaciones de producto", isOn: $updates)
@@ -340,7 +340,7 @@ struct DevicePermissionsScreen: View {
         PermissionState(
             symbol: symbol,
             title: title,
-            detail: "Estado actual: \(status.rawValue). ATLAS consulta el permiso real que informa iOS.",
+            detail: "Estado actual: \(status.rawValue). Atlas consulta el permiso real que informa iOS.",
             buttonTitle: status == .denied || status == .restricted ? "Abrir Ajustes" : (status == .allowed ? "Permitido" : "Solicitar permiso")
         ) {
             if status == .denied || status == .restricted { permissions.openSettings() }
@@ -378,10 +378,10 @@ struct SettingsScreen: View {
 }
 
 struct HelpScreen: View {
-    var body: some View { AtlasPage { ScrollView { VStack(alignment: .leading, spacing: 20) { AtlasBackHeader(title: "Help", eyebrow: "SUPPORT / GUIDE"); help("Getting started", "ATLAS usa por defecto la API de producción en Render. Inicia sesión y sincroniza Mundo."); help("Scanning", "La cámara captura evidencia; Vision procesa OCR local y el backend registra el world state."); help("Offline", "ATLAS marca operaciones locales y las envía por /sync/batch cuando vuelve la conectividad."); help("Troubleshooting", "Revisa Settings → Backend y permisos iOS. Para producción usa el endpoint HTTPS de Render; para desarrollo local, FastAPI debe escuchar en 0.0.0.0.") }.padding(20) } } }
+    var body: some View { AtlasPage { ScrollView { VStack(alignment: .leading, spacing: 20) { AtlasBackHeader(title: "Help", eyebrow: "SUPPORT / GUIDE"); help("Getting started", "Atlas usa por defecto la API de producción en Render. Inicia sesión y sincroniza Mundo."); help("Scanning", "La cámara captura evidencia; Vision procesa OCR local y el backend registra el world state."); help("Offline", "Atlas marca operaciones locales y las envía por /sync/batch cuando vuelve la conectividad."); help("Troubleshooting", "Revisa Settings → Backend y permisos iOS. Para producción usa el endpoint HTTPS de Render; para desarrollo local, FastAPI debe escuchar en 0.0.0.0.") }.padding(20) } } }
     private func help(_ title: String, _ detail: String) -> some View { VStack(alignment: .leading, spacing: 5) { Text(title).font(AtlasType.heading(.headline, weight: .semibold)).foregroundStyle(AtlasColor.ink); Text(detail).font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary) } }
 }
 
 struct AboutScreen: View {
-    var body: some View { AtlasPage { VStack(alignment: .leading, spacing: 20) { AtlasBackHeader(title: "About ATLAS", eyebrow: "PHYSICAL INTELLIGENCE"); Spacer(); AtlasMark(size: 64); Text("ATLAS").font(AtlasType.display(.largeTitle, weight: .bold)).foregroundStyle(AtlasColor.ink); Text("INTELLIGENCE FOR A REAL WORLD").font(AtlasType.label(.caption, weight: .semibold)).tracking(1.2).foregroundStyle(AtlasColor.blue); Text("Mobile-first physical intelligence: assets, world states, evidence, inspections, changes and actions in one traceable system.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary); Spacer() }.padding(20) } }
+    var body: some View { AtlasPage { VStack(alignment: .leading, spacing: 20) { AtlasBackHeader(title: "About Atlas", eyebrow: "PHYSICAL INTELLIGENCE"); Spacer(); AtlasMark(size: 64); Text("Atlas").font(AtlasType.display(.largeTitle, weight: .bold)).foregroundStyle(AtlasColor.ink); Text("INTELLIGENCE FOR A REAL WORLD").font(AtlasType.label(.caption, weight: .semibold)).tracking(1.2).foregroundStyle(AtlasColor.blue); Text("Mobile-first physical intelligence: assets, world states, evidence, inspections, changes and actions in one traceable system.").font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary); Spacer() }.padding(20) } }
 }

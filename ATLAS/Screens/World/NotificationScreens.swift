@@ -13,7 +13,7 @@ struct NotificationsScreen: View {
                         Spacer()
                     }
                     if store.notifications.isEmpty {
-                        AtlasEmptyState(title: "Sin notificaciones", detail: "ATLAS te avisará cuando haya cambios relevantes o tareas pendientes.", symbol: "bell")
+                        AtlasEmptyState(title: "Sin notificaciones", detail: "Atlas te avisará cuando haya cambios relevantes o tareas pendientes.", symbol: "bell")
                     } else {
                         Button("Marcar todas como leídas") { Task { await store.markAllNotificationsRead() } }
                             .font(AtlasType.body(.subheadline, weight: .semibold)).foregroundStyle(AtlasColor.blue)

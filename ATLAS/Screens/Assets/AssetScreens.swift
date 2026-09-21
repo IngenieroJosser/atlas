@@ -50,7 +50,7 @@ struct AssetsScreen: View {
                 }
 
                 if store.assets.isEmpty && store.isRefreshing {
-                    AtlasLoadingState(title: "Cargando activos…", detail: "Sincronizando con ATLAS API.")
+                    AtlasLoadingState(title: "Cargando activos…", detail: "Sincronizando con Atlas API.")
                 } else if filteredAssets.isEmpty {
                     AtlasEmptyState(title: query.isEmpty ? "Tu mundo físico empieza aquí" : "Sin resultados", detail: query.isEmpty ? "Escanea tu primer activo para crear su primer estado." : "Prueba otro nombre, categoría o ubicación.", symbol: "shippingbox")
                     if query.isEmpty { AtlasPrimaryButton(title: "Escanear activo", symbol: "viewfinder", action: startScan) }
@@ -103,9 +103,9 @@ struct SearchScreen: View {
                     AtlasSearchField(text: $query, placeholder: "Activos, inspecciones, reportes, texto…")
 
                     if query.count < 2 {
-                        AtlasEmptyState(title: "Busca en tu mundo", detail: "ATLAS busca activos, eventos, inspecciones, órdenes, reportes y texto reconocido.", symbol: "magnifyingglass")
+                        AtlasEmptyState(title: "Busca en tu mundo", detail: "Atlas busca activos, eventos, inspecciones, órdenes, reportes y texto reconocido.", symbol: "magnifyingglass")
                     } else if store.searchResults.isEmpty && store.isLoading {
-                        AtlasLoadingState(title: "Buscando…", detail: "Consultando la memoria física de ATLAS.")
+                        AtlasLoadingState(title: "Buscando…", detail: "Consultando la memoria física de Atlas.")
                     } else if store.searchResults.isEmpty {
                         AtlasEmptyState(title: "Sin resultados", detail: "No encontramos coincidencias para “\(query)”.", symbol: "magnifyingglass")
                     } else {

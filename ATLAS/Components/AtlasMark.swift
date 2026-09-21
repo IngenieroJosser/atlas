@@ -21,6 +21,6 @@ struct AtlasMark: View {
                 .offset(x: size * 0.39, y: -size * 0.08)
         }
         .frame(width: size, height: size)
-        .accessibilityLabel("ATLAS")
+        .accessibilityLabel("Atlas")
     }
 }

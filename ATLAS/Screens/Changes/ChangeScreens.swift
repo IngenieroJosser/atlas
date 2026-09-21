@@ -18,7 +18,7 @@ struct ChangesScreen: View {
                 }
 
                 if store.changes.isEmpty {
-                    AtlasEmptyState(title: "Sin cambios todavía", detail: "ATLAS necesita estados comparables para detectar diferencias.", symbol: "clock.arrow.circlepath")
+                    AtlasEmptyState(title: "Sin cambios todavía", detail: "Atlas necesita estados comparables para detectar diferencias.", symbol: "clock.arrow.circlepath")
                 } else {
                     ForEach(store.changes) { change in
                         ChangeRow(change: change.presentation(assetName: assetName(change.assetId))) {
@@ -64,7 +64,7 @@ struct ChangeDetailScreen: View {
                         AtlasSectionLabel(index: "02", title: "BEFORE / AFTER")
                         ComparisonView()
 
-                        AIInsight(title: "Interpretación", text: change.description.ifEmpty("ATLAS registró una diferencia entre estados. Revisa la evidencia antes de tomar una acción."), confidence: change.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "N/A")
+                        AIInsight(title: "Interpretación", text: change.description.ifEmpty("Atlas registró una diferencia entre estados. Revisa la evidencia antes de tomar una acción."), confidence: change.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "N/A")
 
                         AtlasPrimaryButton(title: "Comparar estados", symbol: "rectangle.split.2x1") {
                             Task { await store.loadComparison(assetId: change.assetId); open(.compare) }
@@ -107,7 +107,7 @@ struct CompareScreen: View {
                                 AtlasDivider()
                             }
                         }
-                        AIInsight(title: "ATLAS / COMPARISON", text: comparison.interpretation.ifEmpty("La comparación se basa únicamente en los estados registrados."), confidence: "TRACEABLE")
+                        AIInsight(title: "Atlas / COMPARISON", text: comparison.interpretation.ifEmpty("La comparación se basa únicamente en los estados registrados."), confidence: "TRACEABLE")
                     } else {
                         AtlasLoadingState(title: "Comparando estados…", detail: "Recuperando la última comparación disponible.")
                     }
@@ -141,7 +141,7 @@ struct AnomalyDetailScreen: View {
                         MetadataLabel(title: "Ubicación", value: anomaly.locationText.ifEmpty("No registrada"))
                         MetadataLabel(title: "Primera detección", value: anomaly.firstDetected.atlasFull)
                         MetadataLabel(title: "Última observación", value: anomaly.lastObserved.atlasFull)
-                        AIInsight(title: "ATLAS interpretation", text: anomaly.description.ifEmpty("Anomalía registrada. La severidad y confianza provienen de la evidencia disponible."), confidence: anomaly.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "N/A")
+                        AIInsight(title: "Atlas interpretation", text: anomaly.description.ifEmpty("Anomalía registrada. La severidad y confianza provienen de la evidencia disponible."), confidence: anomaly.confidence.map { String(format: "%.0f%%", $0 * 100) } ?? "N/A")
 
                         AtlasPrimaryButton(title: "Crear orden de trabajo", symbol: "wrench.and.screwdriver") {
                             Task { await store.createWorkOrderFromSelectedAnomaly(); open(.workOrders) }

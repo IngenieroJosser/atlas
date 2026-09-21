@@ -8,7 +8,7 @@ struct ReportsScreen: View {
         AtlasPage {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 22) {
-                    AtlasBackHeader(title: "Reports", eyebrow: "ATLAS / REPORTS")
+                    AtlasBackHeader(title: "Reports", eyebrow: "Atlas / REPORTS")
                     Text("Informes construidos a partir de estados, inspecciones, cambios y evidencia.")
                         .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
@@ -65,7 +65,7 @@ struct ReportDetailScreen: View {
                             .font(AtlasType.mono(.caption)).foregroundStyle(AtlasColor.inkMuted)
 
                         AtlasSectionLabel(index: "01", title: "SUMMARY")
-                        Text(report.summary.ifEmpty("Reporte generado por ATLAS a partir de información trazable del sistema."))
+                        Text(report.summary.ifEmpty("Reporte generado por Atlas a partir de información trazable del sistema."))
                             .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary).lineSpacing(4)
 
                         reportBlock("02", "FINDINGS", report.findingsJson.count)
@@ -79,7 +79,7 @@ struct ReportDetailScreen: View {
                             Task {
                                 do {
                                     let data = try await AtlasAPIClient.shared.exportReport(report.id)
-                                    let url = FileManager.default.temporaryDirectory.appendingPathComponent("ATLAS-\(report.id).pdf")
+                                    let url = FileManager.default.temporaryDirectory.appendingPathComponent("Atlas-\(report.id).pdf")
                                     try data.write(to: url, options: .atomic)
                                     await MainActor.run {
                                         exportURL = url

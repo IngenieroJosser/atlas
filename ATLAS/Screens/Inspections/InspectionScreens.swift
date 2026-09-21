@@ -49,7 +49,7 @@ struct NewInspectionScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     AtlasBackHeader(title: "Nueva inspección", eyebrow: "INSPECTION / GUIDED")
-                    Text("ATLAS crea el flujo de inspección y lo asocia al activo seleccionado.")
+                    Text("Atlas crea el flujo de inspección y lo asocia al activo seleccionado.")
                         .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -75,7 +75,7 @@ struct NewInspectionScreen: View {
                         AtlasSectionLabel(index: "03", title: "EVIDENCE")
                         Text("Añade evidencia adicional cuando sea necesario.").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
                         AtlasSectionLabel(index: "04", title: "REVIEW")
-                        Text("ATLAS consolida findings, anomalías y resultado.").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
+                        Text("Atlas consolida findings, anomalías y resultado.").font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.inkMuted)
                     }
 
                     AtlasPrimaryButton(title: "Crear inspección", symbol: "checklist") {
@@ -107,7 +107,7 @@ struct InspectionResultScreen: View {
                     if let result = store.selectedInspection {
                         HStack { Text(result.inspection.status.uppercased()).font(AtlasType.label(.caption2, weight: .semibold)).foregroundStyle(AtlasColor.blue); Spacer(); Text(result.inspection.updatedAt.atlasRelative).font(AtlasType.mono(.caption2)).foregroundStyle(AtlasColor.inkMuted) }
                         Text(result.inspection.title).font(AtlasType.display(.title, weight: .semibold)).foregroundStyle(AtlasColor.ink)
-                        Text(result.inspection.summary.ifEmpty("Inspection workflow connected to ATLAS API."))
+                        Text(result.inspection.summary.ifEmpty("Inspection workflow connected to Atlas API."))
                             .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary)
 
                         HStack(spacing: 8) {

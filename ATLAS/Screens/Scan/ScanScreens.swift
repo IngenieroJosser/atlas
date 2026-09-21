@@ -96,7 +96,7 @@ private struct ScanModeScreen: View {
                             .font(AtlasType.display(.largeTitle, weight: .semibold))
                             .tracking(-1)
                             .foregroundStyle(AtlasColor.ink)
-                        Text("Puedes elegir una categoría o dejar que ATLAS organice la captura automáticamente.")
+                        Text("Puedes elegir una categoría o dejar que Atlas organice la captura automáticamente.")
                             .font(AtlasType.body(.body))
                             .foregroundStyle(AtlasColor.inkSecondary)
                             .lineSpacing(4)
@@ -122,7 +122,7 @@ private struct ScanModeScreen: View {
                                             .font(AtlasType.body(.body, weight: .semibold))
                                             .foregroundStyle(AtlasColor.ink)
                                         if option == .auto {
-                                            Text("ATLAS decidirá el flujo de captura según la escena.")
+                                            Text("Atlas decidirá el flujo de captura según la escena.")
                                                 .font(AtlasType.body(.caption))
                                                 .foregroundStyle(AtlasColor.inkMuted)
                                         }
@@ -163,7 +163,7 @@ private struct ScanModeScreen: View {
         if AtlasDeviceCapabilities.roomPlanSupported {
             return "Cámara + Vision + ARKit + LiDAR / RoomPlan disponibles. La captura espacial se aprovechará cuando sea pertinente."
         }
-        return "Cámara + Vision + ARKit disponibles. ATLAS no requiere LiDAR para capturar evidencia y crear estados."
+        return "Cámara + Vision + ARKit disponibles. Atlas no requiere LiDAR para capturar evidencia y crear estados."
     }
 }
 
@@ -243,7 +243,7 @@ private struct ScanCaptureScreen: View {
         case .unavailable:
             cameraMessage(title: "Cámara no disponible", detail: "Este dispositivo o entorno no ofrece una cámara trasera utilizable.")
         case .failed:
-            cameraMessage(title: "No pudimos iniciar la cámara", detail: "Cierra el escaneo e inténtalo nuevamente. Si continúa, revisa los permisos de ATLAS.")
+            cameraMessage(title: "No pudimos iniciar la cámara", detail: "Cierra el escaneo e inténtalo nuevamente. Si continúa, revisa los permisos de Atlas.")
         }
     }
 
@@ -252,7 +252,7 @@ private struct ScanCaptureScreen: View {
             Image(systemName: "camera.fill")
                 .font(.system(size: 34, weight: .medium))
                 .foregroundStyle(.white)
-            Text("ATLAS necesita acceso a la cámara")
+            Text("Atlas necesita acceso a la cámara")
                 .font(AtlasType.heading(.title2))
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
@@ -477,14 +477,14 @@ private struct ScanProcessingScreen: View {
     @State private var progress = 0
     @State private var failure: String?
 
-    private let steps = ["Evidencia visual", "Registro de captura", "Texto / OCR", "Upload evidence", "Análisis ATLAS", "Preparar world state"]
+    private let steps = ["Evidencia visual", "Registro de captura", "Texto / OCR", "Upload evidence", "Análisis Atlas", "Preparar world state"]
 
     var body: some View {
         AtlasPage {
             VStack(alignment: .leading, spacing: 28) {
                 Spacer()
                 AtlasSectionLabel(index: "AI", title: "ANALYSING WORLD STATE")
-                Text("ATLAS está construyendo un estado trazable.")
+                Text("Atlas está construyendo un estado trazable.")
                     .font(AtlasType.display(.largeTitle, weight: .semibold)).tracking(-1).foregroundStyle(AtlasColor.ink)
                 Text("La captura se procesa localmente con Vision y se registra en el backend con su evidencia original.")
                     .font(AtlasType.body(.body)).foregroundStyle(AtlasColor.inkSecondary).lineSpacing(4)
@@ -625,7 +625,7 @@ private struct ScanResultScreen: View {
                             MetadataLabel(title: "Sync", value: committed.worldState.syncStatus.uppercased())
                             MetadataLabel(title: "Cambios", value: String(committed.detectedChanges.count))
                         }
-                        HStack(spacing: 10) { Image(systemName: "checkmark.circle.fill").foregroundStyle(AtlasColor.healthy); Text("Activo y estado sincronizados con ATLAS API.").font(AtlasType.body(.body, weight: .semibold)).foregroundStyle(AtlasColor.ink) }
+                        HStack(spacing: 10) { Image(systemName: "checkmark.circle.fill").foregroundStyle(AtlasColor.healthy); Text("Activo y estado sincronizados con Atlas API.").font(AtlasType.body(.body, weight: .semibold)).foregroundStyle(AtlasColor.ink) }
                     } else if captureSession == nil {
                         Text("El backend no estaba disponible durante el procesamiento. Puedes capturar de nuevo o guardar la operación localmente para sincronizarla después.")
                             .font(AtlasType.body(.caption)).foregroundStyle(AtlasColor.warning)

@@ -79,7 +79,7 @@ struct WorldScreen: View {
                     .foregroundStyle(.white)
 
                 Text(connectivity.isConnected
-                     ? "ATLAS conecta estados, cambios y acciones en una sola memoria operativa."
+                     ? "Atlas conecta estados, cambios y acciones en una sola memoria operativa."
                      : "Sin conexión. Las capturas pueden permanecer locales y se sincronizarán cuando vuelva la red.")
                     .font(AtlasType.body(.body))
                     .foregroundStyle(Color.white.opacity(0.7))
@@ -98,7 +98,7 @@ struct WorldScreen: View {
                     .buttonStyle(AtlasCompactPressButtonStyle())
 
                     Button { open(.askAtlas) } label: {
-                        Label("Ask ATLAS", systemImage: "sparkles")
+                        Label("Ask Atlas", systemImage: "sparkles")
                             .font(AtlasType.body(.subheadline, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 16)
@@ -146,7 +146,7 @@ struct WorldScreen: View {
         VStack(alignment: .leading, spacing: 10) {
             AtlasSectionLabel(index: "03", title: "REQUIERE ATENCIÓN", trailing: String(format: "%02d", activeAnomalies.count))
             if activeAnomalies.isEmpty {
-                AtlasEmptyState(title: "Sin alertas abiertas", detail: "ATLAS no registra anomalías pendientes en este momento.", symbol: "checkmark.seal")
+                AtlasEmptyState(title: "Sin alertas abiertas", detail: "Atlas no registra anomalías pendientes en este momento.", symbol: "checkmark.seal")
             } else {
                 ForEach(activeAnomalies.prefix(3)) { anomaly in
                     AlertRow(

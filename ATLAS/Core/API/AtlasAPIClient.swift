@@ -47,12 +47,12 @@ nonisolated enum AtlasAPIError: LocalizedError, Sendable {
     var errorDescription: String? {
         switch self {
         case .invalidURL: "La URL del backend no es válida."
-        case .invalidResponse: "ATLAS recibió una respuesta no válida del servidor."
+        case .invalidResponse: "Atlas recibió una respuesta no válida del servidor."
         case .http(let status, let message): "Servidor \(status): \(message)"
         case .decoding(let message): "No se pudo interpretar la respuesta: \(message)"
         case .notAuthenticated: "La sesión expiró. Inicia sesión nuevamente."
         case .emptyResponse: "El servidor respondió sin contenido."
-        case .transport(let message): "No se pudo conectar con ATLAS API: \(message)"
+        case .transport(let message): "No se pudo conectar con Atlas API: \(message)"
         }
     }
 }

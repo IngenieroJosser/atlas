@@ -19,7 +19,7 @@ struct AtlasRootView: View {
                 switch store.sessionState {
                 case .restoring:
                     AtlasPage {
-                        AtlasLoadingState(title: "Recuperando sesión…", detail: "Validando tu sesión segura con ATLAS API.")
+                        AtlasLoadingState(title: "Recuperando sesión…", detail: "Validando tu sesión segura con Atlas API.")
                     }
                 case .signedOut:
                     LoginScreen()

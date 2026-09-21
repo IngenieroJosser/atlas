@@ -15,7 +15,7 @@ struct SplashScreen: View {
                     .scaleEffect(reduceMotion || revealed ? 1 : 0.88)
                     .opacity(reduceMotion || revealed ? 1 : 0)
 
-                Text("ATLAS")
+                Text("Atlas")
                     .font(AtlasType.display(.largeTitle, weight: .bold))
                     .tracking(revealed || reduceMotion ? 5 : 8)
                     .foregroundStyle(.white)
@@ -50,7 +50,7 @@ struct OnboardingScreen: View {
     private let steps = [
         ("01", "OBSERVA", "Captura el mundo real.", "Registra objetos, espacios y evidencia directamente desde el iPhone."),
         ("02", "RECUERDA", "Conserva la memoria de cada activo.", "Cada captura se convierte en un estado histórico que puedes consultar y comparar."),
-        ("03", "ENTIENDE", "Detecta cambios y condiciones.", "ATLAS organiza evidencia, anomalías y contexto para explicar qué cambió."),
+        ("03", "ENTIENDE", "Detecta cambios y condiciones.", "Atlas organiza evidencia, anomalías y contexto para explicar qué cambió."),
         ("04", "ACTÚA", "Convierte información física en decisiones.", "Inspecciona, crea mantenimiento, genera órdenes y conserva trazabilidad.")
     ]
 
@@ -68,7 +68,7 @@ struct OnboardingScreen: View {
         HStack {
             AtlasMark(size: 30)
             VStack(alignment: .leading, spacing: 1) {
-                Text("ATLAS")
+                Text("Atlas")
                     .font(AtlasType.heading(.headline, weight: .bold))
                     .tracking(2.2)
                     .foregroundStyle(AtlasColor.ink)
@@ -132,7 +132,7 @@ struct OnboardingScreen: View {
                     .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
 
                     HStack(alignment: .top, spacing: 14) {
-                        Text("ATLAS")
+                        Text("Atlas")
                             .font(AtlasType.label(.caption2, weight: .semibold))
                             .tracking(1.0)
                             .foregroundStyle(AtlasColor.blue)
@@ -171,7 +171,7 @@ struct OnboardingScreen: View {
             }
 
             AtlasPrimaryButton(
-                title: page == steps.count - 1 ? "Entrar a ATLAS" : "Continuar",
+                title: page == steps.count - 1 ? "Entrar a Atlas" : "Continuar",
                 symbol: "arrow.right"
             ) {
                 if page == steps.count - 1 {
@@ -231,7 +231,7 @@ struct LoginScreen: View {
             VStack(alignment: .leading, spacing: 18) {
                 HStack {
                     AtlasMark(size: 34).environment(\.colorScheme, .dark)
-                    Text("ATLAS")
+                    Text("Atlas")
                         .font(AtlasType.heading(.headline, weight: .bold))
                         .tracking(2.3)
                         .foregroundStyle(.white)
@@ -246,7 +246,7 @@ struct LoginScreen: View {
                     .font(AtlasType.display(.largeTitle, weight: .semibold))
                     .tracking(-1.3)
                     .foregroundStyle(.white)
-                Text("Tu sesión, activos, evidencia e inteligencia se sincronizan con ATLAS API.")
+                Text("Tu sesión, activos, evidencia e inteligencia se sincronizan con Atlas API.")
                     .font(AtlasType.body(.body))
                     .foregroundStyle(Color.white.opacity(0.7))
                     .lineSpacing(4)
@@ -383,7 +383,7 @@ private struct CreateAccountSheet: View {
     @EnvironmentObject private var store: AtlasAppStore
     @Environment(\.dismiss) private var dismiss
     @State private var fullName = ""
-    @State private var organization = "My ATLAS"
+    @State private var organization = "My Atlas"
     @State private var email = ""
     @State private var password = ""
 

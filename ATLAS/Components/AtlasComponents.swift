@@ -11,7 +11,7 @@ struct AppHeader: View {
                 AtlasMark(size: 30)
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("ATLAS")
+                    Text("Atlas")
                         .font(AtlasType.heading(.headline, weight: .bold))
                         .tracking(2.4)
                         .foregroundStyle(AtlasColor.ink)
@@ -409,7 +409,7 @@ struct AlertRow: View {
 
 struct AtlasSearchField: View {
     @Binding var text: String
-    var placeholder: String = "Buscar en ATLAS"
+    var placeholder: String = "Buscar en Atlas"
 
     var body: some View {
         HStack(spacing: 10) {
@@ -474,7 +474,7 @@ struct AIInsight: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .center) {
-                Text("ATLAS / INSIGHT")
+                Text("Atlas / INSIGHT")
                     .font(AtlasType.label(.caption2, weight: .semibold))
                     .tracking(1.0)
                     .foregroundStyle(Color.white.opacity(0.68))
@@ -752,7 +752,7 @@ struct FilterSheet<Content: View>: View {
 extension AtlasEmptyState {
     init(title: String, detail: String, symbol: String) {
         self.init(
-            eyebrow: "ATLAS / EMPTY",
+            eyebrow: "Atlas / EMPTY",
             title: title,
             detail: detail,
             actionTitle: nil,
